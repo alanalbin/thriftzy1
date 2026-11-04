@@ -449,7 +449,7 @@ export async function fetchItems() {
 
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         saveLocalClothes(data);
         return data;
       }

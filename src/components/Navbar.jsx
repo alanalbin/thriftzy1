@@ -4,8 +4,7 @@ import { ShoppingBag, Search, Menu, X, Plus, Shield, Sparkles, Heart, LogOut, La
 
 export default function Navbar({
   admin = null,
-  onOpenAdminLogin,
-  onOpenAdminDashboard,
+  onNavigateAdmin,
   onOpenAddModal,
   onAdminLogout,
   cartCount = 0,
@@ -29,7 +28,7 @@ export default function Navbar({
   const adminName = admin ? (admin.name || admin.email.split('@')[0]) : null;
 
   return (
-    <header className="sticky top-0 z-40 w-full backdrop-blur-2xl bg-white/90 border-b border-red-500/10 transition-all">
+    <header className="sticky top-0 z-40 w-full backdrop-blur-2xl bg-white/95 border-b border-red-500/10 shadow-sm transition-all">
       {/* Top Outcrowd Ticker Bar */}
       <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white py-1.5 px-4 text-center text-[11px] font-bold tracking-wider uppercase overflow-hidden">
         <div className="flex items-center justify-center gap-4">
@@ -38,7 +37,7 @@ export default function Navbar({
             THRIFTZY // STREETWEAR & VINTAGE VAULT
           </span>
           <span className="hidden sm:inline">•</span>
-          <span className="hidden sm:inline">DYNAMIC ADMIN AUTH & SQLITE PERSISTENCE</span>
+          <span className="hidden sm:inline">SQLITE PERSISTENT DATABASE & 3D TACTILE STORE</span>
           <span className="hidden sm:inline">•</span>
           <span>FREE WORLDWIDE SHIPPING OVER $120</span>
         </div>
@@ -47,32 +46,32 @@ export default function Navbar({
       {/* Main Nav */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
-          {/* Logo */}
+          {/* Logo: Clean without border */}
           <div className="flex items-center gap-3">
-            <a href="#" className="flex items-center gap-2 group">
+            <a href="#" className="flex items-center gap-2 group transition-transform hover:scale-105">
               <motion.img
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
                 src="/assets/thriftzy-pill.jpg"
                 alt="Thriftzy Logo"
-                className="h-10 sm:h-12 w-auto object-contain rounded-2xl shadow-sm border border-red-200/50"
+                className="h-9 sm:h-11 w-auto object-contain"
               />
               <span className="sr-only">Thriftzy</span>
             </a>
 
             {/* Admin Status Pill (if logged in) */}
-            {admin ? (
+            {admin && (
               <motion.button
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
-                onClick={onOpenAdminDashboard}
+                onClick={onNavigateAdmin}
                 className="hidden md:inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 rounded-full bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-all outcrowd-shadow"
-                title="Open Admin Command Center"
+                title="Go to Admin Page"
               >
                 <Shield className="w-3.5 h-3.5 text-red-600" />
                 <span>Admin: {adminName}</span>
               </motion.button>
-            ) : null}
+            )}
           </div>
 
           {/* Navigation Links */}
@@ -119,53 +118,42 @@ export default function Navbar({
               ))}
             </div>
 
-            {/* Admin Logged-in Controls OR Admin Login Button */}
-            {admin ? (
-              <div className="flex items-center gap-2">
-                {/* Add Cloth Button */}
-                <motion.button
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.96 }}
-                  onClick={onOpenAddModal}
-                  className="hidden sm:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-red-600 to-rose-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-red-500/25 transition-all hover:shadow-lg"
-                  title="Add new cloth to store"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>+ Add Cloth</span>
-                </motion.button>
+            {/* Product Add Button on Homepage */}
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={onOpenAddModal}
+              className="hidden sm:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-red-600 to-rose-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-red-500/25 transition-all hover:shadow-xl hover:shadow-red-500/40"
+              title="Add a new cloth"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ Add Cloth</span>
+            </motion.button>
 
-                {/* Admin Dashboard Trigger */}
-                <motion.button
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.96 }}
-                  onClick={onOpenAdminDashboard}
-                  className="flex items-center gap-1.5 rounded-full bg-neutral-950 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-neutral-800 transition-all"
-                  title="Admin Dashboard"
-                >
-                  <LayoutDashboard className="w-3.5 h-3.5 text-red-500" />
-                  <span>Dashboard</span>
-                </motion.button>
+            {/* Admin Portal Page Button (Navigates to dedicated /admin page) */}
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={onNavigateAdmin}
+              className={`flex items-center gap-1.5 rounded-full px-3.5 py-2.5 text-xs font-bold transition-all shadow-sm ${
+                admin
+                  ? 'bg-neutral-950 text-white hover:bg-neutral-800'
+                  : 'bg-neutral-100 text-neutral-800 border border-neutral-200 hover:border-red-400 hover:text-red-600'
+              }`}
+              title="Go to Admin Page"
+            >
+              <Shield className="w-3.5 h-3.5 text-red-500" />
+              <span>{admin ? 'Admin Studio' : 'Admin Portal'}</span>
+            </motion.button>
 
-                {/* Logout Icon */}
-                <button
-                  onClick={onAdminLogout}
-                  className="p-2 rounded-xl text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                  title="Sign out"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <motion.button
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
-                onClick={onOpenAdminLogin}
-                className="flex items-center gap-1.5 rounded-full bg-neutral-950 text-white px-4 py-2.5 text-xs font-bold shadow-md hover:bg-red-600 transition-all"
-                title="Admin Login & Management"
+            {admin && (
+              <button
+                onClick={onAdminLogout}
+                className="p-2 rounded-xl text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                title="Sign out"
               >
-                <Shield className="w-3.5 h-3.5 text-red-400" />
-                <span>Admin Login</span>
-              </motion.button>
+                <LogOut className="w-4 h-4" />
+              </button>
             )}
 
             {/* Cart Trigger */}
@@ -203,39 +191,26 @@ export default function Navbar({
           exit={{ opacity: 0, height: 0 }}
           className="lg:hidden border-t border-neutral-100 bg-white px-4 py-4 space-y-3"
         >
-          {admin ? (
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenAddModal();
-                }}
-                className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl bg-red-600 text-white font-bold py-2.5 text-xs shadow-md"
-              >
-                <Plus className="w-3.5 h-3.5" /> + Add Cloth
-              </button>
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenAdminDashboard();
-                }}
-                className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl bg-neutral-950 text-white font-bold py-2.5 text-xs"
-              >
-                <LayoutDashboard className="w-3.5 h-3.5 text-red-500" /> Admin Studio
-              </button>
-            </div>
-          ) : (
+          <div className="flex gap-2">
             <button
               onClick={() => {
                 setMobileMenuOpen(false);
-                onOpenAdminLogin();
+                onOpenAddModal();
               }}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-neutral-950 text-white font-bold py-3 text-xs shadow-md"
+              className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl bg-red-600 text-white font-bold py-2.5 text-xs shadow-md"
             >
-              <Shield className="w-4 h-4 text-red-500" />
-              <span>Admin Login (Dynamic Email & Password)</span>
+              <Plus className="w-3.5 h-3.5" /> + Add Cloth
             </button>
-          )}
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onNavigateAdmin();
+              }}
+              className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl bg-neutral-950 text-white font-bold py-2.5 text-xs shadow-md"
+            >
+              <Shield className="w-3.5 h-3.5 text-red-500" /> Admin Page
+            </button>
+          </div>
 
           <a
             href="#store-catalog"

@@ -89,6 +89,77 @@ if (adminCount === 0) {
   console.log(`[SQLite DB] Initial dynamic admin created: ${initialEmail} (can be changed anytime)`);
 }
 
+// Ensure initial curated clothes & images are seeded in SQLite database
+const clothesCount = db.prepare('SELECT COUNT(*) as count FROM clothes').get().count;
+if (clothesCount === 0) {
+  const insertCloth = db.prepare(`
+    INSERT INTO clothes (
+      id, name, category, brand, price, originalPrice, size, condition, image, gallery, description, contactNumber, status, viewsCount
+    ) VALUES (
+      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    )
+  `);
+
+  insertCloth.run(
+    'cloth_og_01',
+    'Vintage 1996 Leather Moto Racer Jacket',
+    'Jackets & Outerwear',
+    'Thriftzy Archive',
+    180,
+    380,
+    'L',
+    'Like New (Mint)',
+    'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=1000&q=85',
+    JSON.stringify([
+      'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=1000&q=85',
+      'https://images.unsplash.com/photo-1548883354-7622d03aca27?auto=format&fit=crop&w=1000&q=85'
+    ]),
+    'Heavyweight cowhide moto racer with authentic distressed shoulder piping and RiRi brass zippers.',
+    '+1 555-0199',
+    'Available',
+    142
+  );
+
+  insertCloth.run(
+    'cloth_og_02',
+    'Supreme Red Box Edition Heavyweight Tee',
+    'T-Shirts',
+    'Supreme',
+    95,
+    190,
+    'XL',
+    'Brand New with Tags',
+    'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1000&q=85',
+    JSON.stringify([
+      'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1000&q=85'
+    ]),
+    '100% heavyweight combed cotton jersey with classic red box graphic. Preserved in UV garment bag.',
+    '+1 555-0199',
+    'Available',
+    289
+  );
+
+  insertCloth.run(
+    'cloth_og_03',
+    'Washed Crimson Loopback Fleece Hoodie',
+    'Hoodies & Sweaters',
+    'Thriftzy Atelier',
+    85,
+    140,
+    'M',
+    'Like New (Mint)',
+    'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&w=1000&q=85',
+    JSON.stringify([
+      'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&w=1000&q=85'
+    ]),
+    '500 GSM loopback French terry, custom sun-faded wash with triple-needle flatlock seams.',
+    '+1 555-0199',
+    'Available',
+    198
+  );
+  console.log('[SQLite DB] Seeded initial wardrobe clothes & images in SQLite database.');
+}
+
 // Admin Operations
 export function findAdminByEmail(email) {
   if (!email) return null;

@@ -3,8 +3,7 @@ import { ArrowRight, Shield, Plus, LayoutDashboard } from 'lucide-react';
 
 export default function Footer({
   admin = null,
-  onOpenAdminLogin,
-  onOpenAdminDashboard,
+  onNavigateAdmin,
   onOpenAddModal
 }) {
   return (
@@ -20,14 +19,14 @@ export default function Footer({
               <img
                 src="/assets/thriftzy-box.jpg"
                 alt="Thriftzy Logo"
-                className="h-10 w-auto object-contain rounded-lg border border-white/20 shadow-md"
+                className="h-10 w-auto object-contain"
               />
             </div>
             <p className="text-xs text-neutral-400 leading-relaxed">
-              Curated clothes, vintage fashion, and streetwear archive marketplace. Dynamic inventory management and authentic pre-loved apparel.
+              Curated clothes, vintage fashion, and streetwear archive marketplace. Persistent SQLite database and authentic pre-loved apparel.
             </p>
             <div className="text-[11px] text-neutral-500 font-mono">
-              Database: Persistent SQLite + Dynamic Admin Auth
+              Database: Persistent SQLite + Dynamic Admin
             </div>
           </div>
 
@@ -51,29 +50,24 @@ export default function Footer({
               Administration
             </h4>
             <ul className="space-y-2 text-xs text-neutral-400">
-              {admin ? (
-                <>
-                  <li>
-                    <button onClick={onOpenAdminDashboard} className="hover:text-red-400 transition-colors flex items-center gap-1.5 text-xs font-bold text-red-400">
-                      <LayoutDashboard className="w-3.5 h-3.5 text-red-500" />
-                      <span>Admin Command Center</span>
-                    </button>
-                  </li>
-                  <li>
-                    <button onClick={onOpenAddModal} className="hover:text-red-400 transition-colors flex items-center gap-1.5">
-                      <Plus className="w-3.5 h-3.5 text-red-500" />
-                      <span>+ Add New Cloth</span>
-                    </button>
-                  </li>
-                </>
-              ) : (
-                <li>
-                  <button onClick={onOpenAdminLogin} className="hover:text-red-400 transition-colors flex items-center gap-1.5 text-xs font-bold text-white">
-                    <Shield className="w-3.5 h-3.5 text-red-500" />
-                    <span>Admin Login (Dynamic)</span>
-                  </button>
-                </li>
-              )}
+              <li>
+                <button
+                  onClick={onNavigateAdmin}
+                  className="hover:text-red-400 transition-colors flex items-center gap-1.5 text-xs font-bold text-red-400"
+                >
+                  <Shield className="w-3.5 h-3.5 text-red-500" />
+                  <span>Admin Dedicated Page</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={onOpenAddModal}
+                  className="hover:text-red-400 transition-colors flex items-center gap-1.5 text-xs"
+                >
+                  <Plus className="w-3.5 h-3.5 text-red-500" />
+                  <span>+ Add Cloth</span>
+                </button>
+              </li>
               <li><a href="#how-it-works" className="hover:text-red-400 transition-colors">How It Works</a></li>
               <li><a href="#faq" className="hover:text-red-400 transition-colors">Buyer FAQ & Support</a></li>
             </ul>
@@ -82,30 +76,18 @@ export default function Footer({
           {/* Col 4: Quick Action Box */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-200">
-              Store Management
+              Admin Portal
             </h4>
             <p className="text-xs text-neutral-400">
-              {admin
-                ? `Logged in as ${admin.email}. Add clothes, remove items, or manage credentials in the portal.`
-                : 'Sign in to your dynamic admin account to add clothes, remove clothes, or adjust pricing.'}
+              Access the dedicated admin page to manage inventory, upload photos to database, remove clothes, or update credentials.
             </p>
-            {admin ? (
-              <button
-                onClick={onOpenAdminDashboard}
-                className="w-full py-2.5 px-4 rounded-xl bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-colors flex items-center justify-center gap-2 shadow-md shadow-red-600/30"
-              >
-                <span>Admin Studio</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            ) : (
-              <button
-                onClick={onOpenAdminLogin}
-                className="w-full py-2.5 px-4 rounded-xl bg-neutral-900 border border-neutral-700 text-white text-xs font-bold hover:bg-red-600 hover:border-red-600 transition-colors flex items-center justify-center gap-2 shadow-md"
-              >
-                <Shield className="w-3.5 h-3.5 text-red-400" />
-                <span>Admin Login</span>
-              </button>
-            )}
+            <button
+              onClick={onNavigateAdmin}
+              className="w-full py-2.5 px-4 rounded-xl bg-neutral-900 border border-neutral-700 text-white text-xs font-bold hover:bg-red-600 hover:border-red-600 transition-colors flex items-center justify-center gap-2 shadow-md"
+            >
+              <Shield className="w-3.5 h-3.5 text-red-400" />
+              <span>Go to Admin Page</span>
+            </button>
           </div>
         </div>
 
@@ -115,7 +97,7 @@ export default function Footer({
             <img
               src="/assets/thriftzy-pill.jpg"
               alt="Thriftzy Pill"
-              className="h-6 w-auto object-contain rounded"
+              className="h-6 w-auto object-contain"
             />
             <span>© 2026 Thriftzy Store. All rights reserved.</span>
           </div>

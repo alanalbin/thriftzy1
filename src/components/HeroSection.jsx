@@ -5,8 +5,7 @@ import Card3D from './3d/Card3D';
 
 export default function HeroSection({
   admin = null,
-  onOpenAdminLogin,
-  onOpenAdminDashboard,
+  onNavigateAdmin,
   onOpenAddModal,
   featuredCloth,
   totalItemsCount = 0,
@@ -42,7 +41,7 @@ export default function HeroSection({
               transition={{ duration: 0.5 }}
               className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white shadow-sm border border-red-500/20 text-xs font-bold"
             >
-              <img src="/assets/thriftzy-pill.jpg" alt="Thriftzy" className="h-4 w-auto rounded object-contain" />
+              <img src="/assets/thriftzy-pill.jpg" alt="Thriftzy" className="h-4 w-auto object-contain" />
               <span className="text-neutral-900">Curated Streetwear & Vintage Archive</span>
               <span className="text-neutral-300">|</span>
               <span className="text-red-600 flex items-center gap-1">
@@ -70,7 +69,7 @@ export default function HeroSection({
               transition={{ duration: 0.6, delay: 0.2 }}
               className="text-base sm:text-lg text-neutral-600 max-w-xl mx-auto lg:mx-0 leading-relaxed"
             >
-              Thriftzy is the tactile 3D marketplace for pre-loved fashion, rare vintage jackets, and streetwear grails. Inspect pieces in 3D, enjoy instant WhatsApp checkout, and browse verified authentic collections.
+              Thriftzy is the tactile 3D marketplace for pre-loved fashion, rare vintage jackets, and streetwear grails. Direct photo uploads to persistent SQLite database and instant WhatsApp buyer checkout.
             </motion.p>
 
             {/* Hero Search Bar */}
@@ -99,7 +98,7 @@ export default function HeroSection({
               </button>
             </motion.form>
 
-            {/* Action Buttons */}
+            {/* Action Buttons: Add, Browse & Admin Portal */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -114,48 +113,36 @@ export default function HeroSection({
                 <ArrowRight className="w-4 h-4" />
               </a>
 
-              {admin ? (
-                <>
-                  <motion.button
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.96 }}
-                    onClick={onOpenAddModal}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-4 rounded-full bg-neutral-950 text-white font-bold text-xs shadow-md hover:bg-neutral-800 transition-all"
-                  >
-                    <Plus className="w-4 h-4 text-red-500" />
-                    <span>+ Add Cloth (Admin)</span>
-                  </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={onOpenAddModal}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-4 rounded-full bg-white border border-neutral-200 text-neutral-900 font-bold text-xs shadow-sm hover:border-red-400 hover:text-red-600 transition-all"
+              >
+                <Plus className="w-4 h-4 text-red-600" />
+                <span>+ Add Cloth</span>
+              </motion.button>
 
-                  <button
-                    onClick={onOpenAdminDashboard}
-                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-5 py-4 rounded-full bg-red-50 border border-red-200 text-red-700 font-bold text-xs hover:bg-red-100 transition-colors"
-                    title="Open admin dashboard"
-                  >
-                    <LayoutDashboard className="w-3.5 h-3.5 text-red-600" />
-                    <span>Admin Studio</span>
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={onOpenAdminLogin}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-4 rounded-full bg-white border border-neutral-200 text-neutral-800 font-bold text-xs shadow-sm hover:border-red-400 hover:text-red-600 transition-all"
-                >
-                  <Shield className="w-4 h-4 text-red-500" />
-                  <span>Admin Portal</span>
-                </button>
-              )}
+              <button
+                onClick={onNavigateAdmin}
+                className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-5 py-4 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-bold text-xs transition-colors"
+                title="Go to Admin Page"
+              >
+                <Shield className="w-3.5 h-3.5 text-red-600" />
+                <span>Admin Page</span>
+              </button>
             </motion.div>
 
             {/* Outcrowd Trust Metrics */}
             <div className="pt-3 flex flex-wrap items-center justify-center lg:justify-start gap-5 text-xs text-neutral-600 font-medium">
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Curated Vintage Grails
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Direct SQLite Image Database
               </span>
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Instant WhatsApp Checkout
               </span>
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Dynamic SQLite Inventory
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Dedicated Admin Page
               </span>
             </div>
           </div>
@@ -202,7 +189,7 @@ export default function HeroSection({
                         <img
                           src="/assets/thriftzy-box.jpg"
                           alt="Thriftzy"
-                          className="h-8 rounded shadow-md border border-white/20"
+                          className="h-8 object-contain"
                         />
                       </div>
                       <div className="absolute top-3 right-3 bg-black/75 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-sm">
@@ -255,25 +242,15 @@ export default function HeroSection({
                       </p>
                     </div>
 
-                    {admin ? (
-                      <motion.button
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={onOpenAddModal}
-                        className="w-full py-3 rounded-2xl bg-red-600 text-white text-xs font-bold shadow-md hover:bg-red-700 transition-colors flex items-center justify-center gap-1.5"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>+ Add Your First Cloth</span>
-                      </motion.button>
-                    ) : (
-                      <a
-                        href="#store-catalog"
-                        className="w-full py-3 rounded-2xl bg-neutral-950 text-white text-xs font-bold shadow-md hover:bg-red-600 transition-colors flex items-center justify-center gap-1.5"
-                      >
-                        <span>Explore Catalog</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </a>
-                    )}
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={onOpenAddModal}
+                      className="w-full py-3 rounded-2xl bg-red-600 text-white text-xs font-bold shadow-md hover:bg-red-700 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>+ Add Your First Cloth</span>
+                    </motion.button>
                   </div>
                 )}
               </div>
