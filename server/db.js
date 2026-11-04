@@ -82,6 +82,14 @@ db.exec(`
     status TEXT DEFAULT 'Confirmed',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS customer_carts (
+    id TEXT PRIMARY KEY,
+    customer_email TEXT NOT NULL,
+    cloth_id TEXT NOT NULL,
+    item_json TEXT NOT NULL,
+    added_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 console.log('[SQLite DB] Initialized database with customers, orders, and dynamic admin schema.');
@@ -405,6 +413,53 @@ export function getAllOrders() {
     ...r,
     items: JSON.parse(r.items || '[]')
   }));
+}
+
+// Customer Cart Management (Database Stored Carts)
+export function getCustomerCart(email) {
+  if (!email) return [];
+  const cleanEmail = email.toLowerCase().trim();
+  const rows = db.prepare('SELECT * FROM customer_carts WHERE LOWER(customer_email) = ? ORDER BY added_at DESC').all(cleanEmail);
+  return rows.map((r) => {
+    try {
+      return {
+        ...JSON.parse(r.item_json || '{}'),
+        cartItemId: r.id
+      };
+    } catch (e) {
+      return null;
+    }
+  }).filter(Boolean);
+}
+
+export function addToCustomerCart(email, item) {
+  if (!email || !item) return [];
+  const cleanEmail = email.toLowerCase().trim();
+  const cartItemId = 'cart_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
+  const itemJson = JSON.stringify(item);
+
+  db.prepare(`
+    INSERT INTO customer_carts (id, customer_email, cloth_id, item_json)
+    VALUES (?, ?, ?, ?)
+  `).run(cartItemId, cleanEmail, item.id || '', itemJson);
+
+  return getCustomerCart(cleanEmail);
+}
+
+export function removeFromCustomerCart(email, clothId) {
+  if (!email) return [];
+  const cleanEmail = email.toLowerCase().trim();
+  if (clothId) {
+    db.prepare('DELETE FROM customer_carts WHERE LOWER(customer_email) = ? AND (cloth_id = ? OR id = ?)').run(cleanEmail, clothId, clothId);
+  }
+  return getCustomerCart(cleanEmail);
+}
+
+export function clearCustomerCart(email) {
+  if (!email) return [];
+  const cleanEmail = email.toLowerCase().trim();
+  db.prepare('DELETE FROM customer_carts WHERE LOWER(customer_email) = ?').run(cleanEmail);
+  return [];
 }
 
 export function getStats() {

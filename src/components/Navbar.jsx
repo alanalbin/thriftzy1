@@ -14,25 +14,11 @@ export default function Navbar({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 w-full backdrop-blur-2xl bg-white/95 border-b border-red-500/10 shadow-sm transition-all">
-      {/* Top Outcrowd Ticker Bar */}
-      <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white py-1.5 px-4 text-center text-[11px] font-bold tracking-wider uppercase overflow-hidden">
-        <div className="flex items-center justify-center gap-4">
-          <span className="flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5 text-red-200" />
-            THRIFTZY // STREETWEAR & VINTAGE VAULT
-          </span>
-          <span className="hidden sm:inline">•</span>
-          <span className="hidden sm:inline">PAN-INDIA FAST DELIVERY & AUTHENTIC STREETWEAR</span>
-          <span className="hidden sm:inline">•</span>
-          <span>FREE SHIPPING OVER ₹999</span>
-        </div>
-      </div>
-
+    <header className="sticky top-0 z-40 w-full backdrop-blur-2xl bg-white/95 border-b border-neutral-200/80 shadow-sm transition-all">
       {/* Main Nav */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-20">
-          {/* Logo */}
+        <div className="flex items-center justify-between h-20 sm:h-24">
+          {/* Logo (Bigger & Crisp) */}
           <div className="flex items-center gap-3">
             <a href="#" className="flex items-center gap-2 group transition-transform hover:scale-105">
               <motion.img
@@ -40,7 +26,7 @@ export default function Navbar({
                 whileTap={{ scale: 0.96 }}
                 src="/assets/thriftzy-pill.jpg"
                 alt="Thriftzy Logo"
-                className="h-9 sm:h-11 w-auto object-contain"
+                className="h-12 sm:h-16 md:h-18 w-auto object-contain drop-shadow-sm"
               />
               <span className="sr-only">Thriftzy</span>
             </a>

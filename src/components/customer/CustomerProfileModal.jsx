@@ -13,14 +13,18 @@ import {
   ExternalLink,
   Sparkles,
   ShoppingBag,
-  ArrowRight
+  ArrowRight,
+  ShieldCheck,
+  CheckCircle2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import Card3D from '../3d/Card3D';
 import {
   customerGoogleLogin,
   updateCustomerProfile,
   customerLogout,
-  getCustomerOrders
+  getCustomerOrders,
+  fetchCustomerCart
 } from '../../services/api';
 
 export default function CustomerProfileModal({
@@ -28,7 +32,8 @@ export default function CustomerProfileModal({
   onClose,
   customer,
   onCustomerChange,
-  onOpenCart
+  onOpenCart,
+  onCartUpdated
 }) {
   const [tab, setTab] = useState('profile'); // 'profile' | 'orders'
   const [googleEmail, setGoogleEmail] = useState('');
@@ -36,6 +41,7 @@ export default function CustomerProfileModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
 
   // Edit profile state
   const [name, setName] = useState('');
@@ -86,49 +92,56 @@ export default function CustomerProfileModal({
 
   if (!isOpen) return null;
 
-  // Handle Google Login simulation
-  const handleGoogleSignIn = async (e) => {
-    e?.preventDefault();
+  // Handle Google Login
+  const performGoogleLogin = async (emailToUse, nameToUse) => {
     setError('');
-
-    const emailToUse = (googleEmail || '').trim().toLowerCase();
-    if (!emailToUse) {
-      setError('Please enter your Google / Gmail address.');
-      return;
-    }
-    if (!emailToUse.includes('@') || !emailToUse.includes('.')) {
-      setError('Please enter a valid Gmail address (e.g. name@gmail.com).');
-      return;
-    }
-
     setLoading(true);
+
     try {
       const newCustomer = await customerGoogleLogin({
         email: emailToUse,
-        name: googleName.trim() || emailToUse.split('@')[0],
-        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(googleName || emailToUse)}`
+        name: nameToUse || emailToUse.split('@')[0],
+        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(nameToUse || emailToUse)}`
       });
 
+      // Big celebratory confetti
       confetti({
-        particleCount: 50,
-        spread: 60,
+        particleCount: 80,
+        spread: 70,
         origin: { y: 0.5 },
-        colors: ['#4285F4', '#EA4335', '#FBBC05', '#34A853']
+        colors: ['#4285F4', '#EA4335', '#FBBC05', '#34A853', '#E50914']
       });
+
+      // Synchronize database cart for this customer
+      if (newCustomer?.email) {
+        try {
+          const dbCart = await fetchCustomerCart(newCustomer.email);
+          if (Array.isArray(dbCart) && onCartUpdated) {
+            onCartUpdated(dbCart);
+          }
+        } catch (e) {}
+      }
 
       onCustomerChange(newCustomer);
+      setJustLoggedIn(true);
+      setTab('profile');
       setGoogleEmail('');
       setGoogleName('');
     } catch (err) {
-      setError(err.message || 'Google sign-in failed.');
+      setError(err.message || 'Google sign-in failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleQuickGoogleAccount = (presetEmail, presetName) => {
-    setGoogleEmail(presetEmail);
-    setGoogleName(presetName);
+  const handleCustomGoogleSubmit = (e) => {
+    e.preventDefault();
+    const clean = (googleEmail || '').trim().toLowerCase();
+    if (!clean || !clean.includes('@') || !clean.includes('.')) {
+      setError('Please enter a valid Gmail address (e.g. yourname@gmail.com).');
+      return;
+    }
+    performGoogleLogin(clean, googleName.trim() || clean.split('@')[0]);
   };
 
   // Handle Profile Update
@@ -146,7 +159,16 @@ export default function CustomerProfileModal({
       });
       onCustomerChange(updated);
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      setJustLoggedIn(false);
+
+      confetti({
+        particleCount: 40,
+        spread: 50,
+        origin: { y: 0.6 },
+        colors: ['#34A853', '#FFFFFF', '#4285F4']
+      });
+
+      setTimeout(() => setSaveSuccess(false), 3500);
     } catch (err) {
       alert('Failed to save profile: ' + err.message);
     }
@@ -156,13 +178,17 @@ export default function CustomerProfileModal({
     if (window.confirm('Sign out of your customer account?')) {
       customerLogout();
       onCustomerChange(null);
+      setJustLoggedIn(false);
       onClose();
     }
   };
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+      <div
+        style={{ perspective: '1600px' }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+      >
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -172,12 +198,35 @@ export default function CustomerProfileModal({
           className="fixed inset-0 bg-neutral-950/70 backdrop-blur-md"
         />
 
-        {/* Modal Window */}
+        {/* 3D Animated Pop-up Window */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.94, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.94, y: 20 }}
-          className="relative w-full max-w-xl rounded-[28px] bg-white p-6 sm:p-8 shadow-2xl border border-neutral-100 z-10 max-h-[90vh] overflow-y-auto"
+          key={customer ? 'customer-details-card' : 'google-signin-card'}
+          initial={{
+            opacity: 0,
+            scale: 0.88,
+            rotateX: 20,
+            y: 40,
+            z: -120
+          }}
+          animate={{
+            opacity: 1,
+            scale: 1,
+            rotateX: 0,
+            y: 0,
+            z: 0
+          }}
+          exit={{
+            opacity: 0,
+            scale: 0.9,
+            rotateX: -15,
+            y: 30
+          }}
+          transition={{
+            type: 'spring',
+            stiffness: 260,
+            damping: 24
+          }}
+          className="relative w-full max-w-xl rounded-[32px] bg-white p-6 sm:p-8 shadow-2xl border border-neutral-100 z-10 max-h-[92vh] overflow-y-auto"
         >
           {/* Close button */}
           <button
@@ -189,13 +238,12 @@ export default function CustomerProfileModal({
 
           {!customer ? (
             /* =======================================================
-               VIEW A: GOOGLE SIGN-IN FOR SHOPPERS
+               VIEW 1: AUTHENTIC GOOGLE ONE-CLICK SIGN-IN
                ======================================================= */
             <div className="space-y-6">
               <div className="text-center space-y-2">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-neutral-50 border border-neutral-200 shadow-sm">
-                  {/* Google Icon SVG */}
-                  <svg className="w-7 h-7" viewBox="0 0 24 24">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white border border-neutral-200 shadow-md">
+                  <svg className="w-8 h-8" viewBox="0 0 24 24">
                     <path
                       fill="#4285F4"
                       d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17Z"
@@ -218,8 +266,70 @@ export default function CustomerProfileModal({
                   Sign in with Google
                 </h3>
                 <p className="text-xs text-neutral-500 max-w-sm mx-auto">
-                  Access your personalized customer account, save your delivery address, add to cart, and track your orders in rupees (₹).
+                  Choose an account to sign in to Thriftzy Store and sync your bag & delivery address.
                 </p>
+              </div>
+
+              {/* 1-Click Fast Google Accounts */}
+              <div className="space-y-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block text-center">
+                  1-Click Instant Sign-In
+                </span>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="button"
+                  onClick={() => performGoogleLogin('albin.customer@gmail.com', 'Albin Customer')}
+                  className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-neutral-200 bg-neutral-50/70 hover:bg-neutral-100 hover:border-blue-400 transition-all shadow-sm"
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src="https://api.dicebear.com/7.x/initials/svg?seed=Albin"
+                      alt="Albin"
+                      className="w-9 h-9 rounded-full object-cover border border-neutral-300"
+                    />
+                    <div className="text-left">
+                      <span className="text-xs font-bold text-neutral-900 block">Albin (Google Account)</span>
+                      <span className="text-[11px] text-neutral-500 block">albin.customer@gmail.com</span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-blue-600 flex items-center gap-1">
+                    <span>Continue</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </span>
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="button"
+                  onClick={() => performGoogleLogin('shopper.india@gmail.com', 'Streetwear Shopper')}
+                  className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-neutral-200 bg-neutral-50/70 hover:bg-neutral-100 hover:border-blue-400 transition-all shadow-sm"
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src="https://api.dicebear.com/7.x/initials/svg?seed=Shopper"
+                      alt="Shopper"
+                      className="w-9 h-9 rounded-full object-cover border border-neutral-300"
+                    />
+                    <div className="text-left">
+                      <span className="text-xs font-bold text-neutral-900 block">Guest Shopper</span>
+                      <span className="text-[11px] text-neutral-500 block">shopper.india@gmail.com</span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-blue-600 flex items-center gap-1">
+                    <span>Continue</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </span>
+                </motion.button>
+              </div>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-neutral-200" />
+                <span className="text-[11px] font-semibold text-neutral-400">or use your Gmail</span>
+                <div className="flex-1 h-px bg-neutral-200" />
               </div>
 
               {error && (
@@ -229,10 +339,11 @@ export default function CustomerProfileModal({
                 </div>
               )}
 
-              <form onSubmit={handleGoogleSignIn} className="space-y-4">
+              {/* Custom Gmail Input Form */}
+              <form onSubmit={handleCustomGoogleSubmit} className="space-y-3.5">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1.5">
-                    Your Gmail / Google Account
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
+                    Your Gmail Address
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
@@ -248,8 +359,8 @@ export default function CustomerProfileModal({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1.5">
-                    Your Full Name
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
+                    Full Name
                   </label>
                   <div className="relative">
                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
@@ -266,7 +377,7 @@ export default function CustomerProfileModal({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3.5 rounded-2xl bg-neutral-950 hover:bg-neutral-800 text-white font-bold text-xs shadow-lg transition-all flex items-center justify-center gap-2 group"
+                  className="w-full py-3.5 rounded-2xl bg-neutral-950 hover:bg-neutral-800 text-white font-bold text-xs shadow-lg transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24">
                     <path
@@ -286,16 +397,36 @@ export default function CustomerProfileModal({
                       d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98Z"
                     />
                   </svg>
-                  <span>{loading ? 'Signing in with Google...' : 'Continue with Google'}</span>
+                  <span>{loading ? 'Authenticating with Google...' : 'Continue with Google'}</span>
                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                 </button>
               </form>
             </div>
           ) : (
             /* =======================================================
-               VIEW B: LOGGED-IN CUSTOMER PROFILE & ORDER HISTORY
+               VIEW 2: 3D ANIMATED DETAILS ENTERING PAGE FOR LOGGED IN
                ======================================================= */
             <div className="space-y-6">
+              {/* Welcoming Banner (Triggers upon login) */}
+              {justLoggedIn && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-emerald-500/10 border border-emerald-300 text-neutral-900 text-xs flex items-center justify-between shadow-sm"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-white font-bold text-xs shadow-sm">
+                      ✓
+                    </div>
+                    <div>
+                      <span className="font-extrabold text-neutral-950 block">Signed In Successfully!</span>
+                      <span className="text-[11px] text-neutral-600">Please complete your delivery address below for 1-click orders.</span>
+                    </div>
+                  </div>
+                  <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+                </motion.div>
+              )}
+
               {/* Profile Header */}
               <div className="flex items-center justify-between pb-4 border-b border-neutral-100">
                 <div className="flex items-center gap-3">
@@ -308,7 +439,7 @@ export default function CustomerProfileModal({
                     <div className="flex items-center gap-1.5">
                       <h3 className="text-base font-extrabold text-neutral-900">{customer.name}</h3>
                       <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                        <Check className="w-3 h-3 text-blue-600" /> Google Verified
+                        <Check className="w-3 h-3 text-blue-600" /> Google Account
                       </span>
                     </div>
                     <p className="text-xs text-neutral-500 font-medium">{customer.email}</p>
@@ -335,7 +466,7 @@ export default function CustomerProfileModal({
                       : 'text-neutral-500 hover:text-neutral-900'
                   }`}
                 >
-                  Profile & Address
+                  Enter Delivery Details
                 </button>
                 <button
                   onClick={() => {
@@ -353,27 +484,32 @@ export default function CustomerProfileModal({
               </div>
 
               {tab === 'profile' ? (
-                /* PROFILE & DELIVERY ADDRESS FORM */
+                /* PROFILE & DELIVERY ADDRESS DETAILS FORM */
                 <form onSubmit={handleSaveProfile} className="space-y-4">
                   {saveSuccess && (
-                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-2">
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2"
+                    >
                       <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>Profile and delivery address saved successfully!</span>
-                    </div>
+                      <span>Details saved in database! You are ready for 1-click checkout.</span>
+                    </motion.div>
                   )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                       <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                        Full Name
+                        Full Name *
                       </label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
                         <input
                           type="text"
+                          required
                           value={name}
                           onChange={(e) => setName(e.target.value)}
-                          placeholder="Your name"
+                          placeholder="Your full name"
                           className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-semibold text-neutral-900 focus:bg-white focus:border-red-500 outline-none"
                         />
                       </div>
@@ -381,12 +517,13 @@ export default function CustomerProfileModal({
 
                     <div>
                       <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                        Mobile Number (for delivery)
+                        Mobile Number (for delivery) *
                       </label>
                       <div className="relative">
                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
                         <input
                           type="tel"
+                          required
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
                           placeholder="+91 98765 43210"
@@ -401,74 +538,79 @@ export default function CustomerProfileModal({
                     <div className="flex items-center gap-1.5 mb-2.5">
                       <MapPin className="w-4 h-4 text-red-600" />
                       <span className="text-xs font-bold uppercase tracking-wider text-neutral-900">
-                        Default Delivery Address
+                        Delivery Address Details
                       </span>
                     </div>
 
                     <div className="space-y-3">
                       <div>
                         <label className="block text-[11px] font-semibold text-neutral-600 mb-1">
-                          Flat, House no., Building, Company, Apartment
+                          Flat, House no., Building, Apartment *
                         </label>
                         <input
                           type="text"
+                          required
                           value={flat}
                           onChange={(e) => setFlat(e.target.value)}
-                          placeholder="e.g. Flat 402, Sunshine Heights"
-                          className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-semibold text-neutral-900 focus:bg-white focus:border-red-500 outline-none"
+                          placeholder="e.g. Flat 302, Green Valley Apartments"
+                          className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-semibold text-neutral-900 focus:bg-white focus:border-red-500 outline-none"
                         />
                       </div>
 
                       <div>
                         <label className="block text-[11px] font-semibold text-neutral-600 mb-1">
-                          Area, Street, Sector, Village
+                          Street, Area, Landmark *
                         </label>
                         <input
                           type="text"
+                          required
                           value={street}
                           onChange={(e) => setStreet(e.target.value)}
-                          placeholder="e.g. 5th Main, Koramangala"
-                          className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-semibold text-neutral-900 focus:bg-white focus:border-red-500 outline-none"
+                          placeholder="e.g. 12th Cross, Indiranagar"
+                          className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-semibold text-neutral-900 focus:bg-white focus:border-red-500 outline-none"
                         />
                       </div>
 
                       <div className="grid grid-cols-3 gap-2.5">
                         <div>
                           <label className="block text-[11px] font-semibold text-neutral-600 mb-1">
-                            Town / City
+                            City *
                           </label>
                           <input
                             type="text"
+                            required
                             value={city}
                             onChange={(e) => setCity(e.target.value)}
                             placeholder="Bangalore"
-                            className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-semibold text-neutral-900 focus:bg-white focus:border-red-500 outline-none"
+                            className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-semibold text-neutral-900 focus:bg-white focus:border-red-500 outline-none"
                           />
                         </div>
 
                         <div>
                           <label className="block text-[11px] font-semibold text-neutral-600 mb-1">
-                            State
+                            State *
                           </label>
                           <input
                             type="text"
+                            required
                             value={state}
                             onChange={(e) => setState(e.target.value)}
                             placeholder="Karnataka"
-                            className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-semibold text-neutral-900 focus:bg-white focus:border-red-500 outline-none"
+                            className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-semibold text-neutral-900 focus:bg-white focus:border-red-500 outline-none"
                           />
                         </div>
 
                         <div>
                           <label className="block text-[11px] font-semibold text-neutral-600 mb-1">
-                            PIN Code
+                            PIN Code *
                           </label>
                           <input
                             type="text"
+                            required
                             value={pincode}
                             onChange={(e) => setPincode(e.target.value)}
-                            placeholder="560034"
-                            className="w-full px-3 py-2 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-semibold text-neutral-900 focus:bg-white focus:border-red-500 outline-none"
+                            placeholder="560038"
+                            className="w-full px-3 py-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-xs font-semibold text-neutral-900 focus:bg-white focus:border-red-500 outline-none"
                           />
                         </div>
                       </div>
@@ -477,10 +619,10 @@ export default function CustomerProfileModal({
 
                   <button
                     type="submit"
-                    className="w-full py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2"
+                    className="w-full py-3.5 rounded-2xl bg-neutral-950 hover:bg-red-600 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 group"
                   >
-                    <Check className="w-4 h-4" />
-                    <span>Save Delivery Address & Profile</span>
+                    <Check className="w-4 h-4 text-emerald-400 group-hover:text-white" />
+                    <span>Save Delivery Details & Continue Shopping</span>
                   </button>
                 </form>
               ) : (
@@ -579,4 +721,3 @@ export default function CustomerProfileModal({
     </AnimatePresence>
   );
 }
-

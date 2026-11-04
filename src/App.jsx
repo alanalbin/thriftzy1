@@ -30,7 +30,11 @@ import {
   toggleFavorite as apiToggleFavorite,
   adminVerifySession,
   adminLogout as apiAdminLogout,
-  getCustomerProfile
+  getCustomerProfile,
+  fetchCustomerCart,
+  addClothToCustomerCart,
+  removeClothFromCustomerCart,
+  clearCustomerCart as apiClearCustomerCart
 } from './services/api';
 
 export default function App() {
@@ -115,6 +119,15 @@ export default function App() {
         }
         if (stats) setDbStats(stats);
         if (currentAdminSession) setAdmin(currentAdminSession);
+
+        // Load saved customer cart from database if customer is logged in
+        const currentCust = getCustomerProfile();
+        if (currentCust?.email) {
+          const savedCart = await fetchCustomerCart(currentCust.email);
+          if (Array.isArray(savedCart) && savedCart.length > 0) {
+            setCart(savedCart);
+          }
+        }
       } catch (err) {
         console.error('Error initializing app data:', err);
       } finally {
@@ -127,18 +140,38 @@ export default function App() {
 
   const featuredCloth = clothes.length > 0 ? clothes[0] : null;
 
-  // Cart Handlers
-  const handleAddToCart = (item) => {
+  // Database-Backed Cart Handlers
+  const handleAddToCart = async (item) => {
     setCart((prev) => [...prev, item]);
     setIsCartOpen(true);
+    if (customer?.email) {
+      await addClothToCustomerCart(customer.email, item);
+    }
   };
 
-  const handleRemoveFromCart = (index) => {
+  const handleRemoveFromCart = async (index) => {
+    const itemToRemove = cart[index];
     setCart((prev) => prev.filter((_, i) => i !== index));
+    if (customer?.email && itemToRemove) {
+      await removeClothFromCustomerCart(customer.email, itemToRemove.cartItemId || itemToRemove.id || index.toString());
+    }
   };
 
-  const handleClearCart = () => {
+  const handleClearCart = async () => {
     setCart([]);
+    if (customer?.email) {
+      await apiClearCustomerCart(customer.email);
+    }
+  };
+
+  const handleCustomerChange = async (newCustomer) => {
+    setCustomer(newCustomer);
+    if (newCustomer?.email) {
+      const dbCart = await fetchCustomerCart(newCustomer.email);
+      if (Array.isArray(dbCart) && dbCart.length > 0) {
+        setCart(dbCart);
+      }
+    }
   };
 
   // Favorites Handler
@@ -268,8 +301,9 @@ export default function App() {
         isOpen={isCustomerModalOpen}
         onClose={() => setIsCustomerModalOpen(false)}
         customer={customer}
-        onCustomerChange={(newCust) => setCustomer(newCust)}
+        onCustomerChange={handleCustomerChange}
         onOpenCart={() => setIsCartOpen(true)}
+        onCartUpdated={(dbCart) => setCart(dbCart)}
       />
 
       {/* =========================================================================

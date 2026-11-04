@@ -24,7 +24,11 @@ import {
   getCustomerProfile,
   createOrder,
   getCustomerOrders,
-  getAllOrders
+  getAllOrders,
+  getCustomerCart,
+  addToCustomerCart,
+  removeFromCustomerCart,
+  clearCustomerCart
 } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -237,6 +241,52 @@ app.get('/api/admin/orders', (req, res) => {
   try {
     const orders = getAllOrders();
     res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Customer Database Cart Routes
+app.get('/api/customer/cart', (req, res) => {
+  try {
+    const email = req.query.email;
+    if (!email) return res.status(400).json({ error: 'Email parameter is required.' });
+    const cart = getCustomerCart(email);
+    res.json(cart);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/customer/cart', (req, res) => {
+  try {
+    const { email, item } = req.body;
+    if (!email || !item) return res.status(400).json({ error: 'Email and item are required.' });
+    const updated = addToCustomerCart(email, item);
+    res.json({ success: true, cart: updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/customer/cart', (req, res) => {
+  try {
+    const email = req.query.email || req.body?.email;
+    const clothId = req.query.clothId || req.body?.clothId;
+    if (!email) return res.status(400).json({ error: 'Email parameter is required.' });
+    const updated = removeFromCustomerCart(email, clothId);
+    res.json({ success: true, cart: updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/customer/cart/clear', (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required.' });
+    const updated = clearCustomerCart(email);
+    res.json({ success: true, cart: updated });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

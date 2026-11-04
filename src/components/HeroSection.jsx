@@ -204,8 +204,9 @@ export default function HeroSection({
                       </div>
 
                       <div className="pt-2">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-600 font-bold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                          <ShieldCheck className="w-3.5 h-3.5" /> Database Live & Active
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-neutral-800 bg-neutral-100 px-3.5 py-1.5 rounded-full border border-neutral-200">
+                          <Sparkles className="w-3.5 h-3.5 text-red-600" />
+                          <span>Curated Indian Streetwear Collection</span>
                         </span>
                       </div>
                     </div>

@@ -14,7 +14,7 @@ const STEPS = [
     num: '02',
     icon: Tag,
     title: 'Transparent Pricing & Sizes',
-    description: 'Real garment measurements, fabric condition, and authentic market value saved directly in our permanent store database.'
+    description: 'Real garment measurements, fabric condition, and fair prices in Indian rupees (₹) for every piece.'
   },
   {
     num: '03',
@@ -70,7 +70,7 @@ export default function WorkflowSection({ admin = null, onOpenAddModal }) {
 
                     <div className="mt-6 pt-4 border-t border-neutral-200/60 flex items-center gap-2 text-xs text-neutral-500">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      <span>Instant Database Sync</span>
+                      <span>100% Quality Inspected</span>
                     </div>
                   </div>
                 </Card3D>
@@ -81,24 +81,14 @@ export default function WorkflowSection({ admin = null, onOpenAddModal }) {
 
         {/* Action Button */}
         <div className="mt-12 text-center">
-          {admin ? (
-            <button
-              onClick={onOpenAddModal}
-              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-red-600 text-white font-bold text-xs uppercase tracking-wider hover:bg-red-700 transition-colors shadow-md"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ Add Cloth (Admin)</span>
-            </button>
-          ) : (
-            <a
-              href="#store-catalog"
-              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-neutral-950 text-white font-bold text-xs uppercase tracking-wider hover:bg-red-600 transition-colors shadow-md"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span>Explore All Clothes</span>
-              <ArrowRight className="w-4 h-4" />
-            </a>
-          )}
+          <a
+            href="#store-catalog"
+            className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-neutral-950 text-white font-bold text-xs uppercase tracking-wider hover:bg-red-600 transition-colors shadow-md"
+          >
+            <ShoppingBag className="w-4 h-4" />
+            <span>Explore All Clothes</span>
+            <ArrowRight className="w-4 h-4" />
+          </a>
         </div>
       </div>
     </section>

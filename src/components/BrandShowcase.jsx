@@ -47,35 +47,23 @@ export default function BrandShowcase({ admin = null, onOpenAddModal }) {
               </div>
               <div className="flex items-center gap-2.5 text-xs text-neutral-200">
                 <CheckCircle2 className="w-4 h-4 text-red-400 shrink-0" />
-                <span>Persistent database storage keeps all items organized in real time</span>
+                <span>Pan-India express delivery with secure packaging</span>
               </div>
               <div className="flex items-center gap-2.5 text-xs text-neutral-200">
                 <CheckCircle2 className="w-4 h-4 text-red-400 shrink-0" />
-                <span>Direct WhatsApp and messaging connection between buyers and store management</span>
+                <span>Direct WhatsApp and messaging connection with our store team</span>
               </div>
             </div>
 
             <div className="pt-4 flex items-center gap-4">
-              {admin ? (
-                <motion.button
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.96 }}
-                  onClick={onOpenAddModal}
-                  className="px-6 py-3.5 rounded-xl bg-red-600 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-red-600/30 hover:bg-red-700 transition-colors flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>+ Add Cloth (Admin)</span>
-                </motion.button>
-              ) : (
-                <a
-                  href="#store-catalog"
-                  className="px-6 py-3.5 rounded-xl bg-red-600 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-red-600/30 hover:bg-red-700 transition-colors flex items-center gap-2"
-                >
-                  <ShoppingBag className="w-4 h-4" />
-                  <span>Browse Wardrobe Collection</span>
-                  <ArrowRight className="w-4 h-4" />
-                </a>
-              )}
+              <a
+                href="#store-catalog"
+                className="px-6 py-3.5 rounded-xl bg-red-600 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-red-600/30 hover:bg-red-700 transition-colors flex items-center gap-2"
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span>Browse Wardrobe Collection</span>
+                <ArrowRight className="w-4 h-4" />
+              </a>
             </div>
           </div>
         </div>

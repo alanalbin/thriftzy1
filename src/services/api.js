@@ -368,6 +368,105 @@ export async function updateCustomerProfile(updates) {
 }
 
 // -------------------------------------------------------------
+// CUSTOMER DATABASE CART MANAGEMENT
+// -------------------------------------------------------------
+
+const CUSTOMER_SAVED_CARTS_KEY = 'thriftzy_customer_db_carts_v2';
+
+function getLocalCustomerCart(email) {
+  try {
+    const raw = localStorage.getItem(CUSTOMER_SAVED_CARTS_KEY);
+    const store = raw ? JSON.parse(raw) : {};
+    return store[email.toLowerCase()] || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveLocalCustomerCart(email, cart) {
+  try {
+    const raw = localStorage.getItem(CUSTOMER_SAVED_CARTS_KEY);
+    const store = raw ? JSON.parse(raw) : {};
+    store[email.toLowerCase()] = cart;
+    localStorage.setItem(CUSTOMER_SAVED_CARTS_KEY, JSON.stringify(store));
+  } catch (e) {}
+}
+
+export async function fetchCustomerCart(email) {
+  if (!email) return [];
+  try {
+    const res = await fetch(`${API_BASE}/customer/cart?email=${encodeURIComponent(email)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        saveLocalCustomerCart(email, data);
+        return data;
+      }
+    }
+  } catch (e) {}
+  return getLocalCustomerCart(email);
+}
+
+export async function addClothToCustomerCart(email, item) {
+  if (!email || !item) return [];
+  try {
+    const res = await fetch(`${API_BASE}/customer/cart`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, item })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.cart)) {
+        saveLocalCustomerCart(email, data.cart);
+        return data.cart;
+      }
+    }
+  } catch (e) {}
+
+  const current = getLocalCustomerCart(email);
+  const updated = [...current, { ...item, cartItemId: 'cart_' + Date.now().toString(36) }];
+  saveLocalCustomerCart(email, updated);
+  return updated;
+}
+
+export async function removeClothFromCustomerCart(email, clothId) {
+  if (!email) return [];
+  try {
+    const res = await fetch(`${API_BASE}/customer/cart`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, clothId })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.cart)) {
+        saveLocalCustomerCart(email, data.cart);
+        return data.cart;
+      }
+    }
+  } catch (e) {}
+
+  const current = getLocalCustomerCart(email);
+  const updated = current.filter((it, idx) => (it.cartItemId ? it.cartItemId !== clothId : it.id !== clothId && idx.toString() !== clothId));
+  saveLocalCustomerCart(email, updated);
+  return updated;
+}
+
+export async function clearCustomerCart(email) {
+  if (!email) return [];
+  try {
+    await fetch(`${API_BASE}/customer/cart/clear`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+  } catch (e) {}
+  saveLocalCustomerCart(email, []);
+  return [];
+}
+
+// -------------------------------------------------------------
 // ORDERS MANAGEMENT
 // -------------------------------------------------------------
 

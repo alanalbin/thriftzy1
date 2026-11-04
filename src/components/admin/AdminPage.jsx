@@ -385,8 +385,8 @@ export default function AdminPage({
                 <span className="text-xs font-black uppercase tracking-wider text-neutral-900">
                   Admin Command Portal
                 </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold border border-emerald-300">
-                  SQLite Database Live
+                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-neutral-900 text-white border border-neutral-800">
+                  Store Management
                 </span>
               </div>
             </div>
@@ -551,7 +551,7 @@ export default function AdminPage({
               <div className="p-5 rounded-3xl bg-white border border-neutral-200/90 shadow-sm outcrowd-shadow">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">Total Clothes in DB</span>
                 <span className="text-2xl sm:text-3xl font-black text-neutral-950 mt-1 block">{clothes.length} Pieces</span>
-                <span className="text-[11px] text-neutral-500 font-medium">Stored directly in SQLite</span>
+                <span className="text-[11px] text-neutral-500 font-medium">Active store inventory</span>
               </div>
 
               <div className="p-5 rounded-3xl bg-white border border-neutral-200/90 shadow-sm outcrowd-shadow">
