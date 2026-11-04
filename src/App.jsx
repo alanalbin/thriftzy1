@@ -8,8 +8,11 @@ import BrandShowcase from './components/BrandShowcase';
 import FAQAccordion from './components/FAQAccordion';
 import Footer from './components/Footer';
 
-// Dedicated Admin Page
+// Dedicated Admin Page (accessed via separate /admin link)
 import AdminPage from './components/admin/AdminPage';
+
+// Customer Profile & Google Auth Modal
+import CustomerProfileModal from './components/customer/CustomerProfileModal';
 
 // Smooth 3D Popups
 import QuickViewModal from './components/popups/QuickViewModal';
@@ -26,16 +29,17 @@ import {
   getFavorites,
   toggleFavorite as apiToggleFavorite,
   adminVerifySession,
-  adminLogout as apiAdminLogout
+  adminLogout as apiAdminLogout,
+  getCustomerProfile
 } from './services/api';
 
 export default function App() {
-  // Page Routing: 'store' (default homepage) | 'admin' (dedicated admin page)
+  // Page Routing: 'store' (default homepage) | 'admin' (dedicated /admin page)
   const [currentPage, setCurrentPage] = useState(() => {
     if (typeof window !== 'undefined') {
       const p = window.location.pathname.toLowerCase();
       const h = window.location.hash.toLowerCase();
-      if (p === '/admin' || p === '/admin/' || h === '#admin') return 'admin';
+      if (p === '/admin' || p === '/admin/' || h === '#admin' || h === '#/admin') return 'admin';
     }
     return 'store';
   });
@@ -44,7 +48,6 @@ export default function App() {
   const [clothes, setClothes] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [currentCurrency, setCurrentCurrency] = useState('USD');
   const [dbStats, setDbStats] = useState({
     totalClothes: 0,
     totalValuation: 0,
@@ -54,6 +57,10 @@ export default function App() {
 
   // Dynamic Admin Authentication State
   const [admin, setAdmin] = useState(null);
+
+  // Customer Authentication & Profile State (Google Account)
+  const [customer, setCustomer] = useState(() => getCustomerProfile());
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
 
   // Modal states for 3D Popups
   const [quickViewItem, setQuickViewItem] = useState(null);
@@ -69,7 +76,7 @@ export default function App() {
     const handleRouteChange = () => {
       const p = window.location.pathname.toLowerCase();
       const h = window.location.hash.toLowerCase();
-      if (p === '/admin' || p === '/admin/' || h === '#admin') {
+      if (p === '/admin' || p === '/admin/' || h === '#admin' || h === '#/admin') {
         setCurrentPage('admin');
       } else {
         setCurrentPage('store');
@@ -169,16 +176,6 @@ export default function App() {
     fetchDbStats().then(setDbStats).catch(() => {});
   };
 
-  const handleOpenEditModal = (cloth) => {
-    setEditingCloth(cloth);
-    setIsAddClothOpen(true);
-  };
-
-  const handleCloseAddModal = () => {
-    setIsAddClothOpen(false);
-    setEditingCloth(null);
-  };
-
   const handleDatabaseReload = (newItems) => {
     setClothes(newItems);
     fetchDbStats().then(setDbStats).catch(() => {});
@@ -195,7 +192,7 @@ export default function App() {
       className="min-h-screen bg-[#FAFAFC] text-neutral-900 selection:bg-red-600 selection:text-white"
     >
       {/* =========================================================================
-          VIEW 1: DEDICATED ADMIN PAGE (when at /admin)
+          VIEW 1: DEDICATED ADMIN PAGE (accessed via separate /admin link)
           ========================================================================= */}
       {currentPage === 'admin' ? (
         <AdminPage
@@ -213,23 +210,15 @@ export default function App() {
         />
       ) : (
         /* =========================================================================
-           VIEW 2: STORE HOMEPAGE (Customers & Shoppers View with Product Add/Delete)
+           VIEW 2: PUBLIC STOREFRONT (Customers & Shoppers View in Rupees ₹)
            ========================================================================= */
         <>
-          {/* Navigation with clean logo & direct link to Admin Page */}
+          {/* Navigation with Google Login & Bag */}
           <Navbar
-            admin={admin}
-            onNavigateAdmin={() => navigateTo('admin')}
-            onOpenAddModal={() => {
-              setEditingCloth(null);
-              setIsAddClothOpen(true);
-            }}
-            onAdminLogout={handleAdminLogout}
+            customer={customer}
+            onOpenCustomerProfile={() => setIsCustomerModalOpen(true)}
             cartCount={cart.length}
             favoritesCount={favorites.length}
-            currentCurrency={currentCurrency}
-            onCurrencyChange={(curr) => setCurrentCurrency(curr)}
-            dbItemCount={clothes.length}
             onOpenCart={() => setIsCartOpen(true)}
             onToggleFavoritesFilter={() => setShowFavoritesOnly(!showFavoritesOnly)}
             showFavoritesOnly={showFavoritesOnly}
@@ -239,71 +228,52 @@ export default function App() {
           <main>
             {/* Outcrowd 3D Hero Section */}
             <HeroSection
-              admin={admin}
-              onNavigateAdmin={() => navigateTo('admin')}
-              onOpenAddModal={() => {
-                setEditingCloth(null);
-                setIsAddClothOpen(true);
-              }}
+              customer={customer}
+              onOpenCustomerProfile={() => setIsCustomerModalOpen(true)}
               featuredCloth={featuredCloth}
               totalItemsCount={clothes.length}
               onOpenQuickView={(item) => setQuickViewItem(item)}
             />
 
-            {/* 3D Clothes Catalog Section: View, Add, and Delete directly on Homepage! */}
+            {/* 3D Clothes Catalog Section in Rupees (₹) */}
             <ClothesCatalogSection
               clothes={clothes}
               favorites={favorites}
               onToggleFavorite={handleToggleFavorite}
-              currentCurrency={currentCurrency}
               showFavoritesOnly={showFavoritesOnly}
               onResetFavoritesFilter={() => setShowFavoritesOnly(false)}
               onOpenQuickView={(item) => setQuickViewItem(item)}
               onAddToCart={handleAddToCart}
-              onOpenAddModal={() => {
-                setEditingCloth(null);
-                setIsAddClothOpen(true);
-              }}
-              onOpenEditModal={handleOpenEditModal}
-              onDeleteItem={handleDeleteCloth}
             />
 
             {/* How It Works */}
-            <WorkflowSection
-              admin={admin}
-              onOpenAddModal={() => {
-                setEditingCloth(null);
-                setIsAddClothOpen(true);
-              }}
-            />
+            <WorkflowSection />
 
             {/* Brand Showcase */}
-            <BrandShowcase
-              admin={admin}
-              onOpenAddModal={() => {
-                setEditingCloth(null);
-                setIsAddClothOpen(true);
-              }}
-            />
+            <BrandShowcase />
 
             {/* FAQ Accordions */}
             <FAQAccordion />
           </main>
 
           {/* Footer */}
-          <Footer
-            admin={admin}
-            onNavigateAdmin={() => navigateTo('admin')}
-            onOpenAddModal={() => {
-              setEditingCloth(null);
-              setIsAddClothOpen(true);
-            }}
-          />
+          <Footer onNavigateAdmin={() => navigateTo('admin')} />
         </>
       )}
 
       {/* =========================================================================
-          BUTTERY SMOOTH 3D POPUPS
+          CUSTOMER PROFILE & GOOGLE LOGIN MODAL
+          ========================================================================= */}
+      <CustomerProfileModal
+        isOpen={isCustomerModalOpen}
+        onClose={() => setIsCustomerModalOpen(false)}
+        customer={customer}
+        onCustomerChange={(newCust) => setCustomer(newCust)}
+        onOpenCart={() => setIsCartOpen(true)}
+      />
+
+      {/* =========================================================================
+          3D POPUPS & DRAWERS
           ========================================================================= */}
       {/* 1. 3D Quick View Modal */}
       <QuickViewModal
@@ -317,19 +287,23 @@ export default function App() {
       <AddClothModal
         isOpen={isAddClothOpen}
         initialCloth={editingCloth}
-        onClose={handleCloseAddModal}
+        onClose={() => {
+          setIsAddClothOpen(false);
+          setEditingCloth(null);
+        }}
         onClothAdded={handleClothAdded}
         onClothUpdated={handleClothUpdated}
       />
 
-      {/* 3. 3D Cart Drawer with WhatsApp Direct Checkout */}
+      {/* 3. 3D Cart Drawer with Customer Order Flow */}
       <CartDrawerModal
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
         cart={cart}
-        currentCurrency={currentCurrency}
         onRemoveFromCart={handleRemoveFromCart}
         onClearCart={handleClearCart}
+        customer={customer}
+        onOpenCustomerModal={() => setIsCustomerModalOpen(true)}
       />
     </ClickSpark>
   );

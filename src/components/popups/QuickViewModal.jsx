@@ -37,7 +37,7 @@ export default function QuickViewModal({ item, isOpen, onClose, onAddToCart }) {
   // WhatsApp direct link generator
   const getWhatsAppLink = () => {
     const phone = (item.contactNumber || '').replace(/[^0-9]/g, '');
-    const text = encodeURIComponent(`Hi, I'm interested in buying your "${item.name}" (Size: ${item.size}, $${item.price}) on Thriftzy! Is it still available?`);
+    const text = encodeURIComponent(`Hi, I'm interested in buying your "${item.name}" (Size: ${item.size}, ₹${item.price}) on Thriftzy! Is it still available?`);
     return phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
   };
 
@@ -165,15 +165,15 @@ export default function QuickViewModal({ item, isOpen, onClose, onAddToCart }) {
               {/* Price Row */}
               <div className="mt-3 flex items-baseline gap-3">
                 <span className="text-3xl font-extrabold text-neutral-950">
-                  ${item.price}
+                  ₹{Number(item.price).toLocaleString('en-IN')}
                 </span>
                 {item.originalPrice && Number(item.originalPrice) > Number(item.price) && (
                   <>
                     <span className="text-base text-neutral-400 line-through">
-                      ${item.originalPrice}
+                      ₹{Number(item.originalPrice).toLocaleString('en-IN')}
                     </span>
                     <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                      Save ${Math.round(Number(item.originalPrice) - Number(item.price))}
+                      Save ₹{Math.round(Number(item.originalPrice) - Number(item.price)).toLocaleString('en-IN')}
                     </span>
                   </>
                 )}

@@ -15,13 +15,16 @@ import {
   findAdminByEmail,
   findAdminById,
   getAllAdmins,
-  createAdminAccount,
   updateAdminCredentials,
-  deleteAdminAccount,
   createSession,
   verifySession,
   deleteSession,
-  verifyPassword
+  verifyPassword,
+  saveCustomerProfile,
+  getCustomerProfile,
+  createOrder,
+  getCustomerOrders,
+  getAllOrders
 } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -64,7 +67,7 @@ app.get('/api/stats', (req, res) => {
   }
 });
 
-// Admin Dynamic Authentication Routes
+// Admin Authentication (albineditz1@gmail.com / batman)
 app.post('/api/admin/login', (req, res) => {
   try {
     const { email, password } = req.body;
@@ -100,36 +103,9 @@ app.post('/api/admin/login', (req, res) => {
   }
 });
 
+// Disabled registration per user request
 app.post('/api/admin/register', (req, res) => {
-  try {
-    const { email, password, name } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required.' });
-    }
-    if (!email.includes('@') || !email.includes('.')) {
-      return res.status(400).json({ error: 'Please enter a valid email address.' });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
-    }
-
-    const newAdmin = createAdminAccount({
-      email,
-      password,
-      name: name || 'Admin',
-      role: 'admin'
-    });
-
-    const session = createSession(newAdmin.id);
-    res.status(201).json({
-      success: true,
-      token: session.token,
-      expiresAt: session.expiresAt,
-      admin: newAdmin
-    });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
+  res.status(403).json({ error: 'Admin account creation is disabled. Please contact the store administrator.' });
 });
 
 app.get('/api/admin/me', (req, res) => {
@@ -178,29 +154,95 @@ app.put('/api/admin/credentials', (req, res) => {
   }
 });
 
-app.delete('/api/admin/:id', (req, res) => {
+// Customer Authentication & Profile Routes (Google Login)
+app.post('/api/customer/google-auth', (req, res) => {
   try {
-    const admin = getAdminFromReq(req);
-    if (!admin) {
-      return res.status(401).json({ error: 'Unauthorized.' });
+    const { email, name, avatar, phone, address, google_id } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Google account email is required.' });
     }
-    deleteAdminAccount(req.params.id);
-    res.json({ success: true, deletedId: req.params.id });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
 
-app.get('/api/admin/inquiries', (req, res) => {
-  try {
-    const list = getAllInquiries();
-    res.json(list);
+    const customer = saveCustomerProfile({
+      email,
+      name: name || 'Google Customer',
+      avatar: avatar || '',
+      phone: phone || '',
+      address: address || '',
+      google_id: google_id || ''
+    });
+
+    res.json({ success: true, customer });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Clothes CRUD (supports both /api/clothes and /api/items)
+app.get('/api/customer/profile', (req, res) => {
+  try {
+    const email = req.query.email;
+    if (!email) return res.status(400).json({ error: 'Email parameter required.' });
+    const customer = getCustomerProfile(email);
+    res.json({ success: true, customer });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/customer/profile', (req, res) => {
+  try {
+    const { email, name, phone, address, avatar } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required.' });
+    const updated = saveCustomerProfile({ email, name, phone, address, avatar });
+    res.json({ success: true, customer: updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Orders Routes
+app.post('/api/orders', (req, res) => {
+  try {
+    const { customerEmail, customerName, customerPhone, deliveryAddress, items, totalAmount } = req.body;
+    if (!customerEmail || !items || !items.length) {
+      return res.status(400).json({ error: 'Customer email and items are required to place an order.' });
+    }
+
+    const order = createOrder({
+      customerEmail,
+      customerName,
+      customerPhone,
+      deliveryAddress,
+      items,
+      totalAmount
+    });
+
+    res.status(201).json({ success: true, order });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/customer/orders', (req, res) => {
+  try {
+    const email = req.query.email;
+    if (!email) return res.status(400).json({ error: 'Email is required.' });
+    const orders = getCustomerOrders(email);
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/orders', (req, res) => {
+  try {
+    const orders = getAllOrders();
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Clothes CRUD
 const getClothesHandler = (req, res) => {
   try {
     const clothes = getAllClothes();
@@ -214,7 +256,7 @@ const createClothHandler = (req, res) => {
   try {
     const { name, price, image } = req.body;
     if (!name || price === undefined || !image) {
-      return res.status(400).json({ error: 'Cloth name, price, and photo are required.' });
+      return res.status(400).json({ error: 'Cloth name, price in Rupees (₹), and photo are required.' });
     }
     const newCloth = createCloth(req.body);
     res.status(201).json(newCloth);

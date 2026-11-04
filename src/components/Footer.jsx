@@ -1,11 +1,7 @@
 import React from 'react';
-import { ArrowRight, Shield, Plus, LayoutDashboard } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Heart, Sparkles } from 'lucide-react';
 
-export default function Footer({
-  admin = null,
-  onNavigateAdmin,
-  onOpenAddModal
-}) {
+export default function Footer({ onNavigateAdmin }) {
   return (
     <footer className="bg-neutral-950 text-white relative overflow-hidden border-t border-red-500/20 pt-16 pb-12">
       {/* Ambient glow */}
@@ -23,14 +19,14 @@ export default function Footer({
               />
             </div>
             <p className="text-xs text-neutral-400 leading-relaxed">
-              Curated clothes, vintage fashion, and streetwear archive marketplace. Persistent SQLite database and authentic pre-loved apparel.
+              Curated clothes, vintage fashion, and streetwear archive marketplace. 100% authentic pre-loved apparel delivered across India.
             </p>
             <div className="text-[11px] text-neutral-500 font-mono">
-              Database: Persistent SQLite + Dynamic Admin
+              Prices in Indian Rupees (₹) • Free Delivery Over ₹999
             </div>
           </div>
 
-          {/* Col 2: Navigation */}
+          {/* Col 2: Categories */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-200">
               Categories
@@ -44,50 +40,31 @@ export default function Footer({
             </ul>
           </div>
 
-          {/* Col 3: Admin & Portal */}
+          {/* Col 3: Customer Care */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-200">
-              Administration
+              Customer Support
             </h4>
             <ul className="space-y-2 text-xs text-neutral-400">
-              <li>
-                <button
-                  onClick={onNavigateAdmin}
-                  className="hover:text-red-400 transition-colors flex items-center gap-1.5 text-xs font-bold text-red-400"
-                >
-                  <Shield className="w-3.5 h-3.5 text-red-500" />
-                  <span>Admin Dedicated Page</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={onOpenAddModal}
-                  className="hover:text-red-400 transition-colors flex items-center gap-1.5 text-xs"
-                >
-                  <Plus className="w-3.5 h-3.5 text-red-500" />
-                  <span>+ Add Cloth</span>
-                </button>
-              </li>
-              <li><a href="#how-it-works" className="hover:text-red-400 transition-colors">How It Works</a></li>
-              <li><a href="#faq" className="hover:text-red-400 transition-colors">Buyer FAQ & Support</a></li>
+              <li><a href="#how-it-works" className="hover:text-red-400 transition-colors">How Ordering Works</a></li>
+              <li><a href="#faq" className="hover:text-red-400 transition-colors">Buyer FAQ & Returns</a></li>
+              <li><a href="#store-catalog" className="hover:text-red-400 transition-colors">Track Orders</a></li>
+              <li><a href="mailto:support@thriftzy.store" className="hover:text-red-400 transition-colors">Contact Support</a></li>
             </ul>
           </div>
 
-          {/* Col 4: Quick Action Box */}
+          {/* Col 4: Trust Guarantee */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-200">
-              Admin Portal
+              Thriftzy Guarantee
             </h4>
             <p className="text-xs text-neutral-400">
-              Access the dedicated admin page to manage inventory, upload photos to database, remove clothes, or update credentials.
+              Every garment is hand-inspected for authenticity, quality, and condition before shipping. Pay on delivery or via WhatsApp.
             </p>
-            <button
-              onClick={onNavigateAdmin}
-              className="w-full py-2.5 px-4 rounded-xl bg-neutral-900 border border-neutral-700 text-white text-xs font-bold hover:bg-red-600 hover:border-red-600 transition-colors flex items-center justify-center gap-2 shadow-md"
-            >
-              <Shield className="w-3.5 h-3.5 text-red-400" />
-              <span>Go to Admin Page</span>
-            </button>
+            <div className="flex items-center gap-2 text-xs text-emerald-400 font-semibold pt-1">
+              <ShieldCheck className="w-4 h-4" />
+              <span>100% Verified Authentic</span>
+            </div>
           </div>
         </div>
 
@@ -99,13 +76,20 @@ export default function Footer({
               alt="Thriftzy Pill"
               className="h-6 w-auto object-contain"
             />
-            <span>© 2026 Thriftzy Store. All rights reserved.</span>
+            <span>&copy; {new Date().getFullYear()} Thriftzy Vault. All rights reserved.</span>
           </div>
 
-          <div className="flex items-center gap-3 text-neutral-400">
-            <span>White & Red Gradient Theme</span>
-            <span>•</span>
-            <span>SQLite Database & Dynamic Admin</span>
+          <div className="flex items-center gap-5">
+            <a href="#" className="hover:text-neutral-300 transition-colors">Privacy Policy</a>
+            <a href="#" className="hover:text-neutral-300 transition-colors">Terms of Service</a>
+            {/* Discreet admin link */}
+            <button
+              onClick={onNavigateAdmin}
+              className="hover:text-neutral-400 transition-colors text-[11px] opacity-40 hover:opacity-100"
+              title="Separate Admin Portal"
+            >
+              Portal
+            </button>
           </div>
         </div>
       </div>

@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, ArrowRight, Shield, ShoppingBag, Tag, CheckCircle2, Search, Sparkles, Star, ShieldCheck, LayoutDashboard } from 'lucide-react';
+import { ArrowRight, ShoppingBag, CheckCircle2, Search, Sparkles, Star, ShieldCheck, User } from 'lucide-react';
 import Card3D from './3d/Card3D';
 
 export default function HeroSection({
-  admin = null,
-  onNavigateAdmin,
-  onOpenAddModal,
   featuredCloth,
   totalItemsCount = 0,
   onOpenQuickView,
   onSearchSubmit,
+  customer = null,
+  onOpenCustomerProfile = null
 }) {
   const [heroSearch, setHeroSearch] = useState('');
 
@@ -57,37 +56,32 @@ export default function HeroSection({
               className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-neutral-950 uppercase leading-[1.04]"
             >
               Cop Rare Vintage. <br />
-              <span className="gradient-text-red">
-                Curated Streetwear.
-              </span>
+              <span className="gradient-text-red">Wear the Culture.</span>
             </motion.h1>
 
-            {/* Subtitle */}
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-base sm:text-lg text-neutral-600 max-w-xl mx-auto lg:mx-0 leading-relaxed"
+              className="text-base sm:text-lg text-neutral-600 max-w-xl mx-auto lg:mx-0 font-medium"
             >
-              Thriftzy is the tactile 3D marketplace for pre-loved fashion, rare vintage jackets, and streetwear grails. Direct photo uploads to persistent SQLite database and instant WhatsApp buyer checkout.
+              Every garment is an authentic, one-of-one vintage piece. Log in with your Google account to save your delivery address, add clothes to your bag, and order directly in rupees (₹).
             </motion.p>
 
-            {/* Hero Search Bar */}
+            {/* Search Bar */}
             <motion.form
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
               onSubmit={handleSearch}
-              className="max-w-md mx-auto lg:mx-0 flex items-center gap-2 p-1.5 rounded-full bg-white border border-neutral-200/90 shadow-lg shadow-red-950/5 focus-within:border-red-500 transition-all"
+              className="max-w-md mx-auto lg:mx-0 flex items-center gap-2 p-2 rounded-full bg-white shadow-xl shadow-neutral-950/5 border border-neutral-200"
             >
-              <div className="pl-3 text-neutral-400">
-                <Search className="w-4 h-4" />
-              </div>
+              <Search className="w-5 h-5 text-neutral-400 ml-3" />
               <input
                 type="text"
                 value={heroSearch}
                 onChange={(e) => setHeroSearch(e.target.value)}
-                placeholder="Search vintage tees, jackets, pants..."
+                placeholder="Search vintage tees, jackets, hoodies..."
                 className="w-full text-xs font-medium text-neutral-800 placeholder:text-neutral-400 bg-transparent focus:outline-none"
               />
               <button
@@ -98,7 +92,7 @@ export default function HeroSection({
               </button>
             </motion.form>
 
-            {/* Action Buttons: Add, Browse & Admin Portal */}
+            {/* Action Buttons */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -116,145 +110,109 @@ export default function HeroSection({
               <motion.button
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
-                onClick={onOpenAddModal}
+                onClick={onOpenCustomerProfile}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-4 rounded-full bg-white border border-neutral-200 text-neutral-900 font-bold text-xs shadow-sm hover:border-red-400 hover:text-red-600 transition-all"
               >
-                <Plus className="w-4 h-4 text-red-600" />
-                <span>+ Add Cloth</span>
+                <User className="w-4 h-4 text-red-600" />
+                <span>{customer ? `Hi, ${customer.name}` : 'Customer Profile / Sign In'}</span>
               </motion.button>
-
-              <button
-                onClick={onNavigateAdmin}
-                className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-5 py-4 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-bold text-xs transition-colors"
-                title="Go to Admin Page"
-              >
-                <Shield className="w-3.5 h-3.5 text-red-600" />
-                <span>Admin Page</span>
-              </button>
             </motion.div>
 
-            {/* Outcrowd Trust Metrics */}
+            {/* Trust Metrics */}
             <div className="pt-3 flex flex-wrap items-center justify-center lg:justify-start gap-5 text-xs text-neutral-600 font-medium">
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Direct SQLite Image Database
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> 100% Genuine Vintage
               </span>
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Instant WhatsApp Checkout
               </span>
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Dedicated Admin Page
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Free Shipping Over ₹999
               </span>
             </div>
           </div>
 
-          {/* Right Column: Outcrowd 3D Showcase Card */}
-          <div className="lg:col-span-5 flex justify-center relative">
+          {/* Right Column: 3D Interactive Card */}
+          <div className="lg:col-span-5 flex justify-center">
             <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5, type: 'spring' }}
-              className="absolute -top-6 -left-6 z-20 hidden sm:block animate-float-3d"
+              initial={{ opacity: 0, scale: 0.9, rotateY: 15 }}
+              animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="w-full max-w-sm sm:max-w-md"
             >
-              <div className="flex items-center gap-2 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-2xl shadow-xl border border-red-500/20 text-xs font-bold text-neutral-800">
-                <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                <span>Verified Authentic Archive</span>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.7, type: 'spring' }}
-              className="absolute -bottom-5 -right-5 z-20 hidden sm:block animate-float-3d"
-              style={{ animationDelay: '3s' }}
-            >
-              <div className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-2xl shadow-2xl border border-white/30 text-xs font-bold">
-                <Star className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
-                <span>Top Rated Vintage</span>
-              </div>
-            </motion.div>
-
-            {/* 3D Perspective Tilt Card */}
-            <Card3D maxTilt={14} className="w-full max-w-md">
-              <div className="rounded-[32px] bg-white p-5 sm:p-6 shadow-2xl border border-red-500/15 outcrowd-shadow">
-                {featuredCloth ? (
-                  <div className="space-y-4">
-                    <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-neutral-100 border border-neutral-100">
-                      <img
-                        src={featuredCloth.image}
-                        alt={featuredCloth.name}
-                        className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                      />
-                      <div className="absolute top-3 left-3">
+              <Card3D maxTilt={14} className="w-full">
+                <div className="rounded-[32px] bg-white p-4 sm:p-5 shadow-2xl border border-red-500/15 outcrowd-shadow relative overflow-hidden group">
+                  {featuredCloth ? (
+                    <div className="space-y-4">
+                      {/* Image Frame */}
+                      <div className="relative aspect-[4/5] rounded-2xl overflow-hidden bg-neutral-100 shadow-inner">
                         <img
-                          src="/assets/thriftzy-box.jpg"
-                          alt="Thriftzy"
-                          className="h-8 object-contain"
+                          src={featuredCloth.image}
+                          alt={featuredCloth.name}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        />
+                        <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-neutral-950/80 backdrop-blur-md text-white text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                          <span>Staff Pick</span>
+                        </div>
+                      </div>
+
+                      {/* Content & Price */}
+                      <div className="p-1 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider block">
+                            {featuredCloth.category} • Size {featuredCloth.size}
+                          </span>
+                          <h3 className="text-base font-bold text-neutral-900 mt-0.5 line-clamp-1">
+                            {featuredCloth.name}
+                          </h3>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-2xl font-black text-red-600">
+                            ₹{Number(featuredCloth.price).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </div>
+
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => onOpenQuickView(featuredCloth)}
+                        className="w-full py-3 rounded-2xl bg-neutral-950 text-white text-xs font-bold hover:bg-red-600 transition-colors shadow-md flex items-center justify-center gap-1.5"
+                      >
+                        <span>Inspect 3D Details & Order</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </motion.button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 text-center py-6 px-4">
+                      <div className="relative mx-auto max-w-[220px] rounded-2xl overflow-hidden shadow-xl border border-red-200">
+                        <img
+                          src="/assets/thriftzy-poster.jpg"
+                          alt="Thriftzy Poster"
+                          className="w-full h-auto object-cover"
                         />
                       </div>
-                      <div className="absolute top-3 right-3 bg-black/75 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-sm">
-                        {featuredCloth.condition}
-                      </div>
-                    </div>
 
-                    <div className="p-1 flex items-center justify-between">
                       <div>
-                        <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider block">
-                          {featuredCloth.category} • Size {featuredCloth.size}
-                        </span>
-                        <h3 className="text-base font-bold text-neutral-900 mt-0.5 line-clamp-1">
-                          {featuredCloth.name}
+                        <h3 className="text-lg font-bold text-neutral-900">
+                          Thriftzy Streetwear Vault
                         </h3>
+                        <p className="text-xs text-neutral-500 mt-1 max-w-xs mx-auto">
+                          New drops are coming soon! Sign in with your Google account to stay ready for instant checkout.
+                        </p>
                       </div>
-                      <div className="text-right">
-                        <span className="text-2xl font-black text-red-600">
-                          ${featuredCloth.price}
+
+                      <div className="pt-2">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-600 font-bold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                          <ShieldCheck className="w-3.5 h-3.5" /> Database Live & Active
                         </span>
                       </div>
                     </div>
-
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => onOpenQuickView(featuredCloth)}
-                      className="w-full py-3 rounded-2xl bg-neutral-950 text-white text-xs font-bold hover:bg-red-600 transition-colors shadow-md flex items-center justify-center gap-1.5"
-                    >
-                      <span>Inspect 3D Details & Order</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </motion.button>
-                  </div>
-                ) : (
-                  <div className="space-y-4 text-center py-6 px-4">
-                    <div className="relative mx-auto max-w-[220px] rounded-2xl overflow-hidden shadow-xl border border-red-200">
-                      <img
-                        src="/assets/thriftzy-poster.jpg"
-                        alt="Thriftzy Poster"
-                        className="w-full h-auto object-cover"
-                      />
-                    </div>
-
-                    <div>
-                      <h3 className="text-lg font-bold text-neutral-900">
-                        Thriftzy Store Vault
-                      </h3>
-                      <p className="text-xs text-neutral-500 mt-1 max-w-xs mx-auto">
-                        Explore hand-picked streetwear grails and pre-loved fashion gems.
-                      </p>
-                    </div>
-
-                    <motion.button
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={onOpenAddModal}
-                      className="w-full py-3 rounded-2xl bg-red-600 text-white text-xs font-bold shadow-md hover:bg-red-700 transition-colors flex items-center justify-center gap-1.5"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>+ Add Your First Cloth</span>
-                    </motion.button>
-                  </div>
-                )}
-              </div>
-            </Card3D>
+                  )}
+                </div>
+              </Card3D>
+            </motion.div>
           </div>
         </div>
       </div>

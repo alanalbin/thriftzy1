@@ -1,31 +1,17 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingBag, Search, Menu, X, Plus, Shield, Sparkles, Heart, LogOut, LayoutDashboard } from 'lucide-react';
+import { ShoppingBag, Menu, X, Heart, Sparkles, User, Check } from 'lucide-react';
 
 export default function Navbar({
-  admin = null,
-  onNavigateAdmin,
-  onOpenAddModal,
-  onAdminLogout,
   cartCount = 0,
   favoritesCount = 0,
-  currentCurrency = 'USD',
-  onCurrencyChange,
   onOpenCart,
   onToggleFavoritesFilter,
   showFavoritesOnly = false,
-  dbItemCount = 0,
+  customer = null,
+  onOpenCustomerProfile = null
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const currencies = [
-    { code: 'USD', symbol: '$' },
-    { code: 'EUR', symbol: '€' },
-    { code: 'GBP', symbol: '£' },
-    { code: 'INR', symbol: '₹' },
-  ];
-
-  const adminName = admin ? (admin.name || admin.email.split('@')[0]) : null;
 
   return (
     <header className="sticky top-0 z-40 w-full backdrop-blur-2xl bg-white/95 border-b border-red-500/10 shadow-sm transition-all">
@@ -37,16 +23,16 @@ export default function Navbar({
             THRIFTZY // STREETWEAR & VINTAGE VAULT
           </span>
           <span className="hidden sm:inline">•</span>
-          <span className="hidden sm:inline">SQLITE PERSISTENT DATABASE & 3D TACTILE STORE</span>
+          <span className="hidden sm:inline">PAN-INDIA FAST DELIVERY & AUTHENTIC STREETWEAR</span>
           <span className="hidden sm:inline">•</span>
-          <span>FREE WORLDWIDE SHIPPING OVER $120</span>
+          <span>FREE SHIPPING OVER ₹999</span>
         </div>
       </div>
 
       {/* Main Nav */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
-          {/* Logo: Clean without border */}
+          {/* Logo */}
           <div className="flex items-center gap-3">
             <a href="#" className="flex items-center gap-2 group transition-transform hover:scale-105">
               <motion.img
@@ -58,20 +44,6 @@ export default function Navbar({
               />
               <span className="sr-only">Thriftzy</span>
             </a>
-
-            {/* Admin Status Pill (if logged in) */}
-            {admin && (
-              <motion.button
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
-                onClick={onNavigateAdmin}
-                className="hidden md:inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 rounded-full bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-all outcrowd-shadow"
-                title="Go to Admin Page"
-              >
-                <Shield className="w-3.5 h-3.5 text-red-600" />
-                <span>Admin: {adminName}</span>
-              </motion.button>
-            )}
           </div>
 
           {/* Navigation Links */}
@@ -99,61 +71,53 @@ export default function Navbar({
             </a>
           </nav>
 
-          {/* Right Actions */}
+          {/* Right Actions: Google Account & Cart */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Currency Selector */}
-            <div className="hidden sm:flex items-center bg-neutral-100 rounded-full px-2 py-1 text-xs font-bold text-neutral-700 border border-neutral-200">
-              {currencies.map((curr) => (
-                <button
-                  key={curr.code}
-                  onClick={() => onCurrencyChange?.(curr.code)}
-                  className={`px-1.5 py-0.5 rounded-full transition-all ${
-                    currentCurrency === curr.code
-                      ? 'bg-red-600 text-white shadow-sm'
-                      : 'text-neutral-500 hover:text-neutral-900'
-                  }`}
-                >
-                  {curr.symbol}
-                </button>
-              ))}
-            </div>
-
-            {/* Product Add Button on Homepage */}
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={onOpenAddModal}
-              className="hidden sm:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-red-600 to-rose-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-red-500/25 transition-all hover:shadow-xl hover:shadow-red-500/40"
-              title="Add a new cloth"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ Add Cloth</span>
-            </motion.button>
-
-            {/* Admin Portal Page Button (Navigates to dedicated /admin page) */}
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={onNavigateAdmin}
-              className={`flex items-center gap-1.5 rounded-full px-3.5 py-2.5 text-xs font-bold transition-all shadow-sm ${
-                admin
-                  ? 'bg-neutral-950 text-white hover:bg-neutral-800'
-                  : 'bg-neutral-100 text-neutral-800 border border-neutral-200 hover:border-red-400 hover:text-red-600'
-              }`}
-              title="Go to Admin Page"
-            >
-              <Shield className="w-3.5 h-3.5 text-red-500" />
-              <span>{admin ? 'Admin Studio' : 'Admin Portal'}</span>
-            </motion.button>
-
-            {admin && (
-              <button
-                onClick={onAdminLogout}
-                className="p-2 rounded-xl text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                title="Sign out"
+            {/* Customer Google Profile Button */}
+            {customer ? (
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={onOpenCustomerProfile}
+                className="flex items-center gap-2 rounded-full pl-1.5 pr-3.5 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-900 border border-neutral-200 transition-all text-xs font-bold shadow-sm"
+                title="Customer Profile & Orders"
               >
-                <LogOut className="w-4 h-4" />
-              </button>
+                <img
+                  src={customer.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${customer.name}`}
+                  alt={customer.name}
+                  className="w-6 h-6 rounded-full object-cover border border-white"
+                />
+                <span className="max-w-[100px] sm:max-w-[120px] truncate">{customer.name}</span>
+              </motion.button>
+            ) : (
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={onOpenCustomerProfile}
+                className="flex items-center gap-2 rounded-full px-4 py-2 bg-white border border-neutral-200 text-neutral-800 hover:border-neutral-400 text-xs font-bold transition-all shadow-sm"
+                title="Sign in with Google"
+              >
+                {/* Google Icon */}
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17Z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24Z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.28 14.27a7.22 7.22 0 0 1 0-4.54V6.58H1.25a12.01 12.01 0 0 0 0 10.84l4.03-3.15Z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98Z"
+                  />
+                </svg>
+                <span>Google Login</span>
+              </motion.button>
             )}
 
             {/* Cart Trigger */}
@@ -191,26 +155,16 @@ export default function Navbar({
           exit={{ opacity: 0, height: 0 }}
           className="lg:hidden border-t border-neutral-100 bg-white px-4 py-4 space-y-3"
         >
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                onOpenAddModal();
-              }}
-              className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl bg-red-600 text-white font-bold py-2.5 text-xs shadow-md"
-            >
-              <Plus className="w-3.5 h-3.5" /> + Add Cloth
-            </button>
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                onNavigateAdmin();
-              }}
-              className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl bg-neutral-950 text-white font-bold py-2.5 text-xs shadow-md"
-            >
-              <Shield className="w-3.5 h-3.5 text-red-500" /> Admin Page
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              onOpenCustomerProfile?.();
+            }}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl bg-neutral-950 text-white font-bold py-2.5 text-xs shadow-md"
+          >
+            <User className="w-3.5 h-3.5" />
+            <span>{customer ? `Profile: ${customer.name}` : 'Sign in with Google'}</span>
+          </button>
 
           <a
             href="#store-catalog"

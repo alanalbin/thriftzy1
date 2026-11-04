@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Card3D from './3d/Card3D';
 import Scroll3DReveal from './3d/Scroll3DReveal';
-import { Plus, Eye, ShoppingBag, Tag, SlidersHorizontal, Search, MessageCircle, Heart, Star, Sparkles, Edit3, Trash2 } from 'lucide-react';
+import { Eye, ShoppingBag, Tag, SlidersHorizontal, Search, MessageCircle, Heart, Star, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CATEGORIES, SIZES } from '../data/items';
 
@@ -12,27 +12,18 @@ export default function ClothesCatalogSection({
   onToggleFavorite,
   onOpenQuickView,
   onAddToCart,
-  onOpenAddModal,
-  onOpenEditModal,
-  onDeleteItem,
-  currentCurrency = 'USD',
   showFavoritesOnly = false,
   onResetFavoritesFilter
 }) {
   const [activeCategory, setActiveCategory] = useState('All');
   const [selectedSize, setSelectedSize] = useState('All Sizes');
-  const [priceRange, setPriceRange] = useState('all'); // 'all' | 'under50' | '50to100' | 'over100'
+  const [priceRange, setPriceRange] = useState('all'); // 'all' | 'under1000' | '1000to3000' | 'over3000'
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
 
-  // Currency multiplier
-  const currencyRates = { USD: 1, EUR: 0.92, GBP: 0.78, INR: 83 };
-  const currencySymbols = { USD: '$', EUR: '€', GBP: '£', INR: '₹' };
-
-  const formatPrice = (usdAmount) => {
-    const rate = currencyRates[currentCurrency] || 1;
-    const symbol = currencySymbols[currentCurrency] || '$';
-    return `${symbol}${Math.round(Number(usdAmount) * rate)}`;
+  // Format strictly in Indian Rupees
+  const formatPrice = (amount) => {
+    return `₹${Math.round(Number(amount || 0)).toLocaleString('en-IN')}`;
   };
 
   // Filter items
@@ -49,9 +40,9 @@ export default function ClothesCatalogSection({
 
     let matchesPrice = true;
     const p = Number(item.price);
-    if (priceRange === 'under50') matchesPrice = p < 50;
-    if (priceRange === '50to100') matchesPrice = p >= 50 && p <= 100;
-    if (priceRange === 'over100') matchesPrice = p > 100;
+    if (priceRange === 'under1000') matchesPrice = p < 1000;
+    if (priceRange === '1000to3000') matchesPrice = p >= 1000 && p <= 3000;
+    if (priceRange === 'over3000') matchesPrice = p > 3000;
 
     return matchesCat && matchesSize && matchesSearch && matchesPrice;
   }).sort((a, b) => {
@@ -75,20 +66,9 @@ export default function ClothesCatalogSection({
     onAddToCart(item);
   };
 
-  const handleDeleteCloth = async (e, id, name) => {
-    e.stopPropagation();
-    if (window.confirm(`Are you sure you want to delete "${name}" from the store database?`)) {
-      try {
-        await onDeleteItem(id);
-      } catch (err) {
-        alert('Error deleting cloth: ' + err.message);
-      }
-    }
-  };
-
   const getWhatsAppLink = (item) => {
     const phone = (item.contactNumber || '').replace(/[^0-9]/g, '');
-    const text = encodeURIComponent(`Hi, I'm interested in buying your "${item.name}" (Size: ${item.size}, Price: $${item.price}) on Thriftzy!`);
+    const text = encodeURIComponent(`Hi, I'm interested in buying your "${item.name}" (Size: ${item.size}, Price: ₹${item.price}) on Thriftzy!`);
     return phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
   };
 
@@ -106,11 +86,11 @@ export default function ClothesCatalogSection({
               {showFavoritesOnly ? 'Saved Wishlist' : 'Wardrobe'} <span className="gradient-text-red">Collection</span>
             </h2>
             <p className="mt-2 text-sm text-neutral-600 max-w-xl">
-              Authentic vintage fashion and streetwear pieces. Filter by category, size, or price, add your own pieces, or inspect in 3D.
+              Authentic vintage fashion and streetwear pieces. All prices in Indian Rupees (₹). Filter by category, size, or budget, and order directly.
             </p>
           </div>
 
-          {/* Quick Actions: Add Product on Homepage & Sort */}
+          {/* Quick Actions: Reset / Sort */}
           <div className="flex flex-wrap items-center gap-3">
             {showFavoritesOnly && (
               <button
@@ -120,17 +100,6 @@ export default function ClothesCatalogSection({
                 Show All Clothes
               </button>
             )}
-
-            {/* Product Add Button on Homepage */}
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={onOpenAddModal}
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-gradient-to-r from-red-600 to-rose-600 text-white text-xs font-bold shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/35 transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ Add Cloth</span>
-            </motion.button>
 
             {/* Sort Dropdown */}
             <div className="flex items-center gap-1.5 bg-white border border-neutral-200 rounded-full px-3.5 py-2 shadow-sm text-xs">
@@ -157,7 +126,7 @@ export default function ClothesCatalogSection({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search clothes, brands..."
+              placeholder="Search vintage tees, jackets..."
               className="w-full pl-9 pr-3.5 py-2 rounded-full bg-white border border-neutral-200 text-xs text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:border-red-500 shadow-sm"
             />
           </div>
@@ -193,21 +162,21 @@ export default function ClothesCatalogSection({
               ))}
             </select>
 
-            {/* Price Filter */}
+            {/* Price Filter in Rupees */}
             <select
               value={priceRange}
               onChange={(e) => setPriceRange(e.target.value)}
               className="text-xs font-bold rounded-full bg-white border border-neutral-200 px-3.5 py-2 text-neutral-800 focus:outline-none focus:border-red-500 shadow-sm"
             >
               <option value="all">All Prices</option>
-              <option value="under50">Under $50</option>
-              <option value="50to100">$50 - $100</option>
-              <option value="over100">$100+</option>
+              <option value="under1000">Under ₹1,000</option>
+              <option value="1000to3000">₹1,000 – ₹3,000</option>
+              <option value="over3000">Over ₹3,000</option>
             </select>
           </div>
         </div>
 
-        {/* Clothes Grid with Buttery Smooth 3D Tilt Cards */}
+        {/* Clothes Grid with 3D Tilt Cards */}
         <div className="mt-8">
           {filteredClothes.length === 0 ? (
             /* Empty State */
@@ -216,22 +185,15 @@ export default function ClothesCatalogSection({
                 <Tag className="w-8 h-8" />
               </div>
               <h3 className="text-xl font-bold text-neutral-900">
-                {clothes.length === 0 ? 'No Clothes Listed in Store Yet' : 'No clothes match this filter'}
+                {clothes.length === 0 ? 'No Clothes Currently Listed' : 'No clothes match this filter'}
               </h3>
               <p className="mt-2 text-xs sm:text-sm text-neutral-500 max-w-md mx-auto leading-relaxed">
                 {clothes.length === 0
-                  ? 'Your database is ready! Click "+ Add Cloth" to list your first piece directly with photos.'
-                  : 'Try clearing your search query or choosing another category or size.'}
+                  ? 'The store is ready for its first collection! Head over to the separate /admin link to upload products with photos and prices in rupees.'
+                  : 'Try clearing your search query or choosing another category or size filter.'}
               </p>
-              <div className="mt-6 flex items-center justify-center gap-3">
-                <button
-                  onClick={onOpenAddModal}
-                  className="flex items-center gap-2 px-6 py-3 rounded-full bg-red-600 text-white font-bold text-xs shadow-lg shadow-red-500/25 hover:bg-red-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>+ Add Cloth</span>
-                </button>
-                {clothes.length > 0 && (
+              {clothes.length > 0 && (
+                <div className="mt-6 flex items-center justify-center gap-3">
                   <button
                     onClick={() => {
                       setActiveCategory('All');
@@ -243,11 +205,11 @@ export default function ClothesCatalogSection({
                   >
                     Reset Filters
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           ) : (
-            /* Clothes Grid with Outcrowd 3D Cards */
+            /* Clothes Grid */
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
               <AnimatePresence>
                 {filteredClothes.map((item, idx) => {
@@ -307,27 +269,6 @@ export default function ClothesCatalogSection({
                                 {item.condition}
                               </div>
 
-                              {/* Homepage Action Badges (Edit & Delete right on homepage) */}
-                              <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-20 opacity-90 group-hover:opacity-100 transition-opacity">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onOpenEditModal?.(item);
-                                  }}
-                                  className="p-2 rounded-xl bg-white/95 text-neutral-800 hover:text-red-600 hover:bg-white shadow-md text-xs font-bold transition-all"
-                                  title="Edit cloth details"
-                                >
-                                  <Edit3 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={(e) => handleDeleteCloth(e, item.id, item.name)}
-                                  className="p-2 rounded-xl bg-white/95 text-neutral-600 hover:bg-red-600 hover:text-white shadow-md text-xs font-bold transition-all"
-                                  title="Delete cloth from database"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-
                               {/* Hover Quick View Overlay */}
                               {!isSold && (
                                 <div className="absolute inset-0 bg-neutral-950/35 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
@@ -383,7 +324,7 @@ export default function ClothesCatalogSection({
                             </div>
                           </div>
 
-                          {/* Bottom Bar: Price & Action */}
+                          {/* Bottom Bar: Price & Add to Cart */}
                           <div className="p-5 pt-0 border-t border-neutral-100 mt-2 flex items-center justify-between">
                             <div>
                               {item.originalPrice && Number(item.originalPrice) > Number(item.price) && (
@@ -411,15 +352,18 @@ export default function ClothesCatalogSection({
                                   whileHover={{ scale: 1.05 }}
                                   whileTap={{ scale: 0.95 }}
                                   onClick={(e) => handleAddToCart(e, item)}
-                                  className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-red-600 text-white text-xs font-bold shadow-md shadow-red-500/20 hover:bg-red-700 transition-colors"
+                                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-neutral-950 text-white text-xs font-bold hover:bg-red-600 transition-colors shadow-sm"
                                 >
                                   <ShoppingBag className="w-3.5 h-3.5" />
                                   <span>Add to Bag</span>
                                 </motion.button>
                               ) : (
-                                <span className="px-3 py-1.5 rounded-full bg-neutral-100 text-neutral-500 text-xs font-bold">
-                                  Sold Out
-                                </span>
+                                <button
+                                  disabled
+                                  className="px-4 py-2.5 rounded-full bg-neutral-100 text-neutral-400 text-xs font-bold cursor-not-allowed"
+                                >
+                                  Sold
+                                </button>
                               )}
                             </div>
                           </div>

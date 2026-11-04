@@ -33,13 +33,12 @@ import Card3D from '../3d/Card3D';
 import { CATEGORIES, SIZES, CONDITIONS } from '../../data/items';
 import {
   adminLogin,
-  adminRegister,
   adminLogout,
   adminUpdateCredentials,
   adminGetList,
-  adminDeleteAccount,
   exportDatabaseJSON,
-  importDatabaseJSON
+  importDatabaseJSON,
+  getAllOrders
 } from '../../services/api';
 
 export default function AdminPage({
@@ -55,16 +54,15 @@ export default function AdminPage({
   onOpenQuickView,
   onDatabaseReload
 }) {
-  // Login / Register state if not authenticated
-  const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
+  // Login state
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
-  const [authConfirmPassword, setAuthConfirmPassword] = useState('');
-  const [authName, setAuthName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState('');
   const [authSuccess, setAuthSuccess] = useState('');
+  const [customerOrders, setCustomerOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
 
   // Dashboard Controls
   const [searchQuery, setSearchQuery] = useState('');
@@ -111,10 +109,11 @@ export default function AdminPage({
   const [newAdminLoading, setNewAdminLoading] = useState(false);
   const [adminList, setAdminList] = useState([]);
 
-  // Load admins list if logged in
+  // Load admins and customer orders if logged in
   useEffect(() => {
     if (admin) {
       loadAdmins();
+      loadCustomerOrders();
     }
   }, [admin]);
 
@@ -123,6 +122,17 @@ export default function AdminPage({
       const list = await adminGetList();
       setAdminList(list || []);
     } catch (e) {}
+  };
+
+  const loadCustomerOrders = async () => {
+    setOrdersLoading(true);
+    try {
+      const list = await getAllOrders();
+      setCustomerOrders(list || []);
+    } catch (e) {
+    } finally {
+      setOrdersLoading(false);
+    }
   };
 
   // Auth Handler
@@ -136,27 +146,10 @@ export default function AdminPage({
       return;
     }
 
-    if (authMode === 'register') {
-      if (authPassword.length < 6) {
-        setAuthError('Password must be at least 6 characters long.');
-        return;
-      }
-      if (authPassword !== authConfirmPassword) {
-        setAuthError('Passwords do not match. Please re-enter.');
-        return;
-      }
-    }
-
     setAuthLoading(true);
     try {
-      let session;
-      if (authMode === 'login') {
-        session = await adminLogin(authEmail, authPassword);
-        setAuthSuccess(`Welcome back, ${session.admin.name || session.admin.email}!`);
-      } else {
-        session = await adminRegister(authEmail, authPassword, authName || 'Admin');
-        setAuthSuccess(`Admin account created successfully! Signed in as ${session.admin.email}`);
-      }
+      const session = await adminLogin(authEmail, authPassword);
+      setAuthSuccess(`Welcome, ${session.admin.name || session.admin.email}! Access granted.`);
 
       confetti({
         particleCount: 50,
@@ -167,15 +160,15 @@ export default function AdminPage({
 
       onAdminLoginSuccess(session.admin);
     } catch (err) {
-      setAuthError(err.message || 'Authentication failed. Please check your credentials.');
+      setAuthError(err.message || 'Authentication failed. Incorrect email or password.');
     } finally {
       setAuthLoading(false);
     }
   };
 
   const fillDemoAdmin = () => {
-    setAuthEmail('admin@thriftzy.store');
-    setAuthPassword('adminpassword123');
+    setAuthEmail('albineditz1@gmail.com');
+    setAuthPassword('batman');
     setAuthError('');
   };
 
@@ -456,40 +449,6 @@ export default function AdminPage({
                     </p>
                   </div>
 
-                  {/* Mode Tabs */}
-                  <div className="mt-6 grid grid-cols-2 p-1 rounded-2xl bg-neutral-100 border border-neutral-200">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAuthMode('login');
-                        setAuthError('');
-                        setAuthSuccess('');
-                      }}
-                      className={`py-2.5 text-xs font-bold rounded-xl transition-all ${
-                        authMode === 'login'
-                          ? 'bg-white text-neutral-950 shadow-sm'
-                          : 'text-neutral-500 hover:text-neutral-900'
-                      }`}
-                    >
-                      Sign In
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAuthMode('register');
-                        setAuthError('');
-                        setAuthSuccess('');
-                      }}
-                      className={`py-2.5 text-xs font-bold rounded-xl transition-all ${
-                        authMode === 'register'
-                          ? 'bg-white text-neutral-950 shadow-sm'
-                          : 'text-neutral-500 hover:text-neutral-900'
-                      }`}
-                    >
-                      + Register New Admin
-                    </button>
-                  </div>
-
                   {/* Feedback Messages */}
                   {authError && (
                     <div className="mt-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
@@ -507,24 +466,6 @@ export default function AdminPage({
 
                   {/* Auth Form */}
                   <form onSubmit={handleAuthSubmit} className="mt-5 space-y-4">
-                    {authMode === 'register' && (
-                      <div>
-                        <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-700 block mb-1">
-                          Full Name / Admin Title
-                        </label>
-                        <div className="relative">
-                          <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                          <input
-                            type="text"
-                            value={authName}
-                            onChange={(e) => setAuthName(e.target.value)}
-                            placeholder="e.g. Albin Manager"
-                            className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 focus:outline-none focus:border-red-500 focus:bg-white transition-colors"
-                          />
-                        </div>
-                      </div>
-                    )}
-
                     <div>
                       <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-700 block mb-1">
                         Admin Email ID *
@@ -536,7 +477,7 @@ export default function AdminPage({
                           required
                           value={authEmail}
                           onChange={(e) => setAuthEmail(e.target.value)}
-                          placeholder="admin@thriftzy.store"
+                          placeholder="albineditz1@gmail.com"
                           className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 focus:outline-none focus:border-red-500 focus:bg-white transition-colors"
                         />
                       </div>
@@ -553,7 +494,7 @@ export default function AdminPage({
                           required
                           value={authPassword}
                           onChange={(e) => setAuthPassword(e.target.value)}
-                          placeholder="Enter your password"
+                          placeholder="••••••••"
                           className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 focus:outline-none focus:border-red-500 focus:bg-white transition-colors"
                         />
                         <button
@@ -566,25 +507,6 @@ export default function AdminPage({
                       </div>
                     </div>
 
-                    {authMode === 'register' && (
-                      <div>
-                        <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-700 block mb-1">
-                          Confirm Password *
-                        </label>
-                        <div className="relative">
-                          <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                          <input
-                            type={showPassword ? 'text' : 'password'}
-                            required
-                            value={authConfirmPassword}
-                            onChange={(e) => setAuthConfirmPassword(e.target.value)}
-                            placeholder="Repeat password"
-                            className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 focus:outline-none focus:border-red-500 focus:bg-white transition-colors"
-                          />
-                        </div>
-                      </div>
-                    )}
-
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
@@ -592,27 +514,25 @@ export default function AdminPage({
                       type="submit"
                       className="w-full mt-2 flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold text-xs shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/35 transition-all disabled:opacity-50"
                     >
-                      <span>{authLoading ? 'Authenticating...' : authMode === 'login' ? 'Sign In as Admin' : 'Create Admin Account'}</span>
+                      <span>{authLoading ? 'Authenticating...' : 'Sign In as Admin'}</span>
                       <ArrowRight className="w-4 h-4" />
                     </motion.button>
                   </form>
 
                   {/* Demo fill button */}
-                  {authMode === 'login' && (
-                    <div className="mt-5 pt-4 border-t border-neutral-100 text-center">
-                      <span className="text-[11px] text-neutral-400 block mb-1.5">
-                        Initial dynamic admin account ready in database:
-                      </span>
-                      <button
-                        type="button"
-                        onClick={fillDemoAdmin}
-                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-[11px] font-mono transition-colors"
-                      >
-                        <Sparkles className="w-3.5 h-3.5 text-red-600" />
-                        <span>admin@thriftzy.store / adminpassword123</span>
-                      </button>
-                    </div>
-                  )}
+                  <div className="mt-5 pt-4 border-t border-neutral-100 text-center">
+                    <span className="text-[11px] text-neutral-400 block mb-1.5">
+                      Store Owner Admin Credentials:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={fillDemoAdmin}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-[11px] font-mono transition-colors"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-red-600" />
+                      <span>albineditz1@gmail.com / batman</span>
+                    </button>
+                  </div>
                 </div>
               </Card3D>
             </motion.div>
@@ -637,7 +557,7 @@ export default function AdminPage({
               <div className="p-5 rounded-3xl bg-white border border-neutral-200/90 shadow-sm outcrowd-shadow">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">Inventory Valuation</span>
                 <span className="text-2xl sm:text-3xl font-black text-red-600 mt-1 block">
-                  ${clothes.reduce((acc, it) => acc + (Number(it.price) || 0), 0).toLocaleString()}
+                  ₹{clothes.reduce((acc, it) => acc + (Number(it.price) || 0), 0).toLocaleString('en-IN')}
                 </span>
                 <span className="text-[11px] text-neutral-500 font-medium">Active wardrobe value</span>
               </div>
@@ -784,7 +704,7 @@ export default function AdminPage({
                             </span>
                           </div>
                           <span className="font-extrabold text-red-600 text-base">
-                            ${newCloth.price || '0'}
+                            ₹{newCloth.price || '0'}
                           </span>
                         </div>
                       </div>
@@ -841,11 +761,11 @@ export default function AdminPage({
                       </div>
                     </div>
 
-                    {/* Price & Original Price */}
+                    {/* Price & Original Price in Rupees */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-700 block mb-1">
-                          Selling Price ($) *
+                          Selling Price (₹) *
                         </label>
                         <input
                           type="number"
@@ -854,14 +774,14 @@ export default function AdminPage({
                           step="any"
                           value={newCloth.price}
                           onChange={(e) => setNewCloth({ ...newCloth, price: e.target.value })}
-                          placeholder="65"
+                          placeholder="1499"
                           className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-900 font-bold focus:border-red-500 focus:bg-white focus:outline-none"
                         />
                       </div>
 
                       <div>
                         <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-700 block mb-1">
-                          Original Price ($ optional)
+                          Original Price (₹ optional)
                         </label>
                         <input
                           type="number"
@@ -869,7 +789,7 @@ export default function AdminPage({
                           step="any"
                           value={newCloth.originalPrice}
                           onChange={(e) => setNewCloth({ ...newCloth, originalPrice: e.target.value })}
-                          placeholder="120"
+                          placeholder="2999"
                           className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-900 focus:border-red-500 focus:bg-white focus:outline-none"
                         />
                       </div>
@@ -1095,11 +1015,11 @@ export default function AdminPage({
                             <div className="text-left sm:text-right">
                               {item.originalPrice && (
                                 <span className="text-[11px] text-neutral-400 line-through block">
-                                  ${item.originalPrice}
+                                  ₹{Number(item.originalPrice).toLocaleString('en-IN')}
                                 </span>
                               )}
                               <span className="text-lg font-black text-neutral-900">
-                                ${item.price}
+                                ₹{Number(item.price).toLocaleString('en-IN')}
                               </span>
                             </div>
 
@@ -1247,50 +1167,98 @@ export default function AdminPage({
                 </form>
               </div>
 
-              {/* Register Another Admin & Database Portability */}
+              {/* Customer Orders Registry & Database Portability */}
               <div className="space-y-6">
-                <form onSubmit={handleCreateAdmin} className="p-6 sm:p-8 rounded-[32px] bg-white border border-neutral-200/90 shadow-xl outcrowd-shadow space-y-3.5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-                      <User className="w-5 h-5" />
+                <div className="p-6 sm:p-8 rounded-[32px] bg-white border border-neutral-200/90 shadow-xl outcrowd-shadow space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                        <ShoppingBag className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-neutral-900">
+                          Customer Orders Database
+                        </h3>
+                        <p className="text-xs text-neutral-500">
+                          Live orders placed by customers ({customerOrders.length} total)
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-base font-bold text-neutral-900">
-                        Register Another Admin
-                      </h3>
-                      <p className="text-xs text-neutral-500">
-                        Create another admin account with their own email ID and password.
-                      </p>
-                    </div>
+
+                    <button
+                      onClick={loadCustomerOrders}
+                      className="p-2 text-neutral-500 hover:text-red-600 hover:bg-neutral-100 rounded-xl transition-colors"
+                      title="Refresh Orders"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${ordersLoading ? 'animate-spin' : ''}`} />
+                    </button>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <input
-                      type="email"
-                      required
-                      value={newAdminForm.email}
-                      onChange={(e) => setNewAdminForm({ ...newAdminForm, email: e.target.value })}
-                      placeholder="New admin email ID"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 bg-neutral-50 text-xs focus:outline-none focus:border-emerald-500 focus:bg-white"
-                    />
-                    <input
-                      type="password"
-                      required
-                      value={newAdminForm.password}
-                      onChange={(e) => setNewAdminForm({ ...newAdminForm, password: e.target.value })}
-                      placeholder="Password (min 6 chars)"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 bg-neutral-50 text-xs focus:outline-none focus:border-emerald-500 focus:bg-white"
-                    />
-                  </div>
+                  {ordersLoading ? (
+                    <div className="text-center py-6 text-xs text-neutral-400">Loading orders...</div>
+                  ) : customerOrders.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-neutral-500 bg-neutral-50 rounded-2xl border border-neutral-200/60 p-4">
+                      No customer orders recorded yet. When shoppers order with their Google account, their order details and shipping address appear here.
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                      {customerOrders.map((order) => (
+                        <div
+                          key={order.id}
+                          className="p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 text-xs space-y-2"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono font-bold text-neutral-950">#{order.id}</span>
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                              {order.status || 'Confirmed'}
+                            </span>
+                          </div>
 
-                  <button
-                    type="submit"
-                    disabled={newAdminLoading}
-                    className="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition-colors shadow-sm"
-                  >
-                    {newAdminLoading ? 'Registering...' : '+ Create Admin Account'}
-                  </button>
-                </form>
+                          <div className="grid grid-cols-2 gap-2 text-[11px] text-neutral-600">
+                            <div>
+                              <span className="font-semibold text-neutral-800 block">{order.customer_name || 'Customer'}</span>
+                              <span className="text-neutral-500 block">{order.customer_email}</span>
+                              {order.customer_phone && (
+                                <span className="text-neutral-700 block font-mono">📞 {order.customer_phone}</span>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <span className="font-black text-red-600 text-sm block">
+                                ₹{Number(order.total_amount).toLocaleString('en-IN')}
+                              </span>
+                              <span className="text-[10px] text-neutral-400">
+                                {new Date(order.created_at || Date.now()).toLocaleDateString('en-IN')}
+                              </span>
+                            </div>
+                          </div>
+
+                          {order.delivery_address && (
+                            <div className="text-[11px] text-neutral-600 bg-white p-2 rounded-xl border border-neutral-200">
+                              <span className="font-bold text-neutral-800">Address: </span>
+                              {order.delivery_address}
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between pt-1 border-t border-neutral-200 text-[11px]">
+                            <span className="text-neutral-500 font-medium">
+                              {(order.items || []).length} item(s) ordered
+                            </span>
+                            {order.customer_phone && (
+                              <a
+                                href={`https://wa.me/${order.customer_phone.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(order.customer_name || '')},%20this%20is%20Thriftzy%20regarding%20your%20order%20%23${order.id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-emerald-600 font-bold hover:underline"
+                              >
+                                Chat on WhatsApp →
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {/* Database Backup & Restore */}
                 <div className="p-6 rounded-[32px] bg-neutral-50 border border-neutral-200/90 space-y-3">

@@ -1,84 +1,21 @@
 const API_BASE = '/api';
-const LOCAL_STORAGE_KEY = 'thriftzy_user_clothes_v2';
-const FAVORITES_KEY = 'thriftzy_favorites_v2';
-const ADMIN_SESSION_KEY = 'thriftzy_admin_session_v3';
-const ADMIN_ACCOUNTS_KEY = 'thriftzy_admin_accounts_v3';
+const LOCAL_STORAGE_KEY = 'thriftzy_user_clothes_v3';
+const FAVORITES_KEY = 'thriftzy_favorites_v3';
+const ADMIN_SESSION_KEY = 'thriftzy_admin_session_v4';
+const ADMIN_ACCOUNTS_KEY = 'thriftzy_admin_accounts_v4';
+const CUSTOMER_SESSION_KEY = 'thriftzy_customer_profile_v4';
+const CUSTOMER_ORDERS_KEY = 'thriftzy_customer_orders_v4';
 
-// Starter clothes for storefront
-const STARTER_CLOTHES = [
-  {
-    id: 'cloth_og_01',
-    name: 'Vintage 1996 Leather Moto Racer Jacket',
-    category: 'Jackets & Outerwear',
-    brand: 'Thriftzy Archive',
-    price: 180,
-    originalPrice: 380,
-    size: 'L',
-    condition: 'Like New (Mint)',
-    image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=1000&q=85',
-    gallery: [
-      'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1548883354-7622d03aca27?auto=format&fit=crop&w=1000&q=85'
-    ],
-    description: 'Heavyweight cowhide moto racer with authentic distressed shoulder piping and RiRi brass zippers.',
-    contactNumber: '+1 555-0199',
-    status: 'Available',
-    viewsCount: 142,
-    rating: 5.0,
-    reviewsCount: 8,
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString()
-  },
-  {
-    id: 'cloth_og_02',
-    name: 'Supreme Red Box Edition Heavyweight Tee',
-    category: 'T-Shirts',
-    brand: 'Supreme',
-    price: 95,
-    originalPrice: 190,
-    size: 'XL',
-    condition: 'Brand New with Tags',
-    image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1000&q=85',
-    gallery: [
-      'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1000&q=85'
-    ],
-    description: '100% heavyweight combed cotton jersey with classic red box graphic. Preserved in UV garment bag.',
-    contactNumber: '+1 555-0199',
-    status: 'Available',
-    viewsCount: 289,
-    rating: 4.9,
-    reviewsCount: 12,
-    created_at: new Date(Date.now() - 86400000 * 4).toISOString()
-  },
-  {
-    id: 'cloth_og_03',
-    name: 'Washed Crimson Loopback Fleece Hoodie',
-    category: 'Hoodies & Sweaters',
-    brand: 'Thriftzy Atelier',
-    price: 85,
-    originalPrice: 140,
-    size: 'M',
-    condition: 'Like New (Mint)',
-    image: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&w=1000&q=85',
-    gallery: [
-      'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&w=1000&q=85'
-    ],
-    description: '500 GSM loopback French terry, custom sun-faded wash with triple-needle flatlock seams.',
-    contactNumber: '+1 555-0199',
-    status: 'Available',
-    viewsCount: 198,
-    rating: 4.8,
-    reviewsCount: 6,
-    created_at: new Date(Date.now() - 86400000 * 6).toISOString()
-  }
-];
+// Zero static demo clothes - 100% clean live database
+const STARTER_CLOTHES = [];
 
-// Fallback initial admin accounts
+// Master Admin account: albineditz1@gmail.com / batman
 const DEFAULT_LOCAL_ADMINS = [
   {
-    id: 'admin_init_1',
-    email: 'admin@thriftzy.store',
-    password: 'adminpassword123',
-    name: 'Store Owner',
+    id: 'admin_albin_master',
+    email: 'albineditz1@gmail.com',
+    password: 'batman',
+    name: 'Albin',
     role: 'superadmin',
     created_at: new Date().toISOString()
   }
@@ -91,7 +28,20 @@ function getLocalAdmins() {
       localStorage.setItem(ADMIN_ACCOUNTS_KEY, JSON.stringify(DEFAULT_LOCAL_ADMINS));
       return DEFAULT_LOCAL_ADMINS;
     }
-    return JSON.parse(raw);
+    const list = JSON.parse(raw);
+    // Ensure albineditz1@gmail.com is present with password batman
+    const found = list.find((a) => a.email.toLowerCase() === 'albineditz1@gmail.com');
+    if (!found) {
+      const updated = [...list.filter((a) => a.email.toLowerCase() !== 'admin@thriftzy.store'), DEFAULT_LOCAL_ADMINS[0]];
+      localStorage.setItem(ADMIN_ACCOUNTS_KEY, JSON.stringify(updated));
+      return updated;
+    }
+    // Update password to batman if different
+    if (found.password !== 'batman') {
+      found.password = 'batman';
+      localStorage.setItem(ADMIN_ACCOUNTS_KEY, JSON.stringify(list));
+    }
+    return list;
   } catch (e) {
     return DEFAULT_LOCAL_ADMINS;
   }
@@ -103,30 +53,33 @@ function saveLocalAdmins(admins) {
   } catch (e) {}
 }
 
-// Helper to get local fallback clothes
+// Helper to get local fallback clothes (cleans out old demo clothes)
 function getLocalClothes() {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (!raw) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(STARTER_CLOTHES));
-      return STARTER_CLOTHES;
+      return [];
     }
-    return JSON.parse(raw);
+    const items = JSON.parse(raw);
+    // Filter out old static placeholder items
+    const cleanItems = Array.isArray(items) ? items.filter((x) => !x.id?.startsWith('cloth_og_')) : [];
+    return cleanItems;
   } catch (e) {
-    return STARTER_CLOTHES;
+    return [];
   }
 }
 
 function saveLocalClothes(items) {
   try {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(items));
+    const cleanItems = Array.isArray(items) ? items.filter((x) => !x.id?.startsWith('cloth_og_')) : [];
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cleanItems));
   } catch (e) {
     console.warn('Storage quota error:', e);
   }
 }
 
 // -------------------------------------------------------------
-// DYNAMIC ADMIN AUTHENTICATION
+// ADMIN AUTHENTICATION
 // -------------------------------------------------------------
 
 export function getAdminSession() {
@@ -157,7 +110,7 @@ export async function adminLogin(email, password) {
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2500);
+    const timeout = setTimeout(() => controller.abort(), 2000);
 
     const res = await fetch(`${API_BASE}/admin/login`, {
       method: 'POST',
@@ -180,12 +133,11 @@ export async function adminLogin(email, password) {
     saveAdminSession(session);
     return session;
   } catch (err) {
-    // If server sent an explicit error message (e.g. 401 Incorrect password), re-throw it
     if (err.name !== 'AbortError' && !err.message.includes('fetch')) {
       throw err;
     }
 
-    // Offline / Local fallback: check local admins
+    // Local / Offline fallback (for Vercel static environment)
     const localAdmins = getLocalAdmins();
     const found = localAdmins.find((a) => a.email.toLowerCase() === cleanEmail);
     if (!found) {
@@ -211,88 +163,9 @@ export async function adminLogin(email, password) {
   }
 }
 
-// Admin Register (Dynamic email & password)
-export async function adminRegister(email, password, name = 'Admin') {
-  const cleanEmail = (email || '').trim().toLowerCase();
-  const cleanPass = password || '';
-
-  if (!cleanEmail || !cleanPass) {
-    throw new Error('Email ID and password are required.');
-  }
-  if (!cleanEmail.includes('@') || !cleanEmail.includes('.')) {
-    throw new Error('Please enter a valid email address.');
-  }
-  if (cleanPass.length < 6) {
-    throw new Error('Password must be at least 6 characters.');
-  }
-
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2500);
-
-    const res = await fetch(`${API_BASE}/admin/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: cleanEmail, password: cleanPass, name: name.trim() }),
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || 'Failed to register admin account');
-    }
-
-    const session = {
-      token: data.token,
-      admin: data.admin,
-      expiresAt: data.expiresAt
-    };
-    saveAdminSession(session);
-
-    // Also mirror to local list
-    const localAdmins = getLocalAdmins();
-    if (!localAdmins.some((a) => a.email.toLowerCase() === cleanEmail)) {
-      saveLocalAdmins([...localAdmins, { ...data.admin, password: cleanPass }]);
-    }
-
-    return session;
-  } catch (err) {
-    if (err.name !== 'AbortError' && !err.message.includes('fetch')) {
-      throw err;
-    }
-
-    // Local registration fallback
-    const localAdmins = getLocalAdmins();
-    if (localAdmins.some((a) => a.email.toLowerCase() === cleanEmail)) {
-      throw new Error('An admin account with this email already exists.');
-    }
-
-    const newAdmin = {
-      id: 'admin_local_' + Date.now().toString(36),
-      email: cleanEmail,
-      password: cleanPass,
-      name: name.trim() || 'Admin',
-      role: 'admin',
-      created_at: new Date().toISOString()
-    };
-
-    saveLocalAdmins([...localAdmins, newAdmin]);
-
-    const session = {
-      token: 'tok_local_' + Date.now().toString(36),
-      admin: {
-        id: newAdmin.id,
-        email: newAdmin.email,
-        name: newAdmin.name,
-        role: newAdmin.role,
-        created_at: newAdmin.created_at
-      },
-      expiresAt: new Date(Date.now() + 7 * 86400000).toISOString()
-    };
-    saveAdminSession(session);
-    return session;
-  }
+// Admin Registration Disabled
+export async function adminRegister() {
+  throw new Error('Admin registration is disabled. Only authorized administrators may log in.');
 }
 
 // Admin Logout
@@ -321,7 +194,7 @@ export async function adminVerifySession() {
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2000);
+    const timeout = setTimeout(() => controller.abort(), 1500);
     const res = await fetch(`${API_BASE}/admin/me`, {
       headers: { Authorization: `Bearer ${session.token}` },
       signal: controller.signal
@@ -336,11 +209,10 @@ export async function adminVerifySession() {
     }
   } catch (e) {}
 
-  // If local token or server unreachable, rely on stored session
   return session.admin || null;
 }
 
-// Update Admin Credentials (Dynamic Email & Password Change)
+// Update Admin Credentials
 export async function adminUpdateCredentials({ email, password, name, currentPassword }) {
   const session = getAdminSession();
   const token = session?.token;
@@ -363,7 +235,6 @@ export async function adminUpdateCredentials({ email, password, name, currentPas
   } catch (err) {
     if (!err.message.includes('fetch')) throw err;
 
-    // Local fallback update
     const localAdmins = getLocalAdmins();
     const currentAdminId = session?.admin?.id;
     const target = localAdmins.find((a) => a.id === currentAdminId);
@@ -375,7 +246,7 @@ export async function adminUpdateCredentials({ email, password, name, currentPas
 
     if (email && email.trim()) target.email = email.trim().toLowerCase();
     if (password && password.trim()) {
-      if (password.length < 6) throw new Error('Password must be at least 6 characters.');
+      if (password.length < 5) throw new Error('Password must be at least 5 characters.');
       target.password = password;
     }
     if (name && name.trim()) target.name = name.trim();
@@ -413,33 +284,172 @@ export async function adminGetList() {
   }));
 }
 
-// Delete Admin
-export async function adminDeleteAccount(id) {
-  const session = getAdminSession();
+// -------------------------------------------------------------
+// CUSTOMER GOOGLE AUTHENTICATION & PROFILE
+// -------------------------------------------------------------
+
+export function getCustomerProfile() {
   try {
-    const res = await fetch(`${API_BASE}/admin/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: session?.token ? `Bearer ${session.token}` : '' }
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error || 'Failed to delete admin.');
-    }
-    return true;
+    const raw = localStorage.getItem(CUSTOMER_SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
   } catch (e) {
-    if (!e.message.includes('fetch')) throw e;
-    const local = getLocalAdmins();
-    if (local.length <= 1) throw new Error('Cannot delete the last admin account.');
-    saveLocalAdmins(local.filter((a) => a.id !== id));
-    return true;
+    return null;
   }
+}
+
+export function saveCustomerProfile(profile) {
+  try {
+    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(profile));
+  } catch (e) {}
+}
+
+export function customerLogout() {
+  try {
+    localStorage.removeItem(CUSTOMER_SESSION_KEY);
+  } catch (e) {}
+}
+
+export async function customerGoogleLogin({ email, name, avatar, phone, address, google_id }) {
+  const cleanEmail = (email || '').trim().toLowerCase();
+  if (!cleanEmail) throw new Error('Email is required for Google Sign-in.');
+
+  const customerData = {
+    id: 'cust_' + Date.now().toString(36),
+    google_id: google_id || 'goog_' + Date.now().toString(36),
+    email: cleanEmail,
+    name: name || cleanEmail.split('@')[0],
+    avatar: avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name || cleanEmail)}`,
+    phone: phone || '',
+    address: address || '',
+    created_at: new Date().toISOString()
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/customer/google-auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(customerData)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.customer) {
+        saveCustomerProfile(data.customer);
+        return data.customer;
+      }
+    }
+  } catch (e) {}
+
+  // Fallback to client persistent storage
+  saveCustomerProfile(customerData);
+  return customerData;
+}
+
+export async function updateCustomerProfile(updates) {
+  const current = getCustomerProfile() || {};
+  const merged = { ...current, ...updates };
+
+  try {
+    const res = await fetch(`${API_BASE}/customer/profile`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(merged)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.customer) {
+        saveCustomerProfile(data.customer);
+        return data.customer;
+      }
+    }
+  } catch (e) {}
+
+  saveCustomerProfile(merged);
+  return merged;
+}
+
+// -------------------------------------------------------------
+// ORDERS MANAGEMENT
+// -------------------------------------------------------------
+
+function getLocalOrders() {
+  try {
+    const raw = localStorage.getItem(CUSTOMER_ORDERS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveLocalOrders(orders) {
+  try {
+    localStorage.setItem(CUSTOMER_ORDERS_KEY, JSON.stringify(orders));
+  } catch (e) {}
+}
+
+export async function createCustomerOrder(orderData) {
+  const newOrder = {
+    id: 'ORD-' + Math.floor(100000 + Math.random() * 900000),
+    customerEmail: orderData.customerEmail,
+    customerName: orderData.customerName || 'Customer',
+    customerPhone: orderData.customerPhone || '',
+    deliveryAddress: orderData.deliveryAddress || '',
+    items: orderData.items || [],
+    totalAmount: Number(orderData.totalAmount) || 0,
+    currency: 'INR',
+    status: 'Confirmed',
+    created_at: new Date().toISOString()
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newOrder)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.order) {
+        const local = getLocalOrders();
+        saveLocalOrders([data.order, ...local]);
+        return data.order;
+      }
+    }
+  } catch (e) {}
+
+  const local = getLocalOrders();
+  saveLocalOrders([newOrder, ...local]);
+  return newOrder;
+}
+
+export async function getCustomerOrders(email) {
+  try {
+    const res = await fetch(`${API_BASE}/customer/orders?email=${encodeURIComponent(email)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) return data;
+    }
+  } catch (e) {}
+
+  const local = getLocalOrders();
+  return local.filter((o) => o.customerEmail?.toLowerCase() === email?.toLowerCase());
+}
+
+export async function getAllOrders() {
+  try {
+    const res = await fetch(`${API_BASE}/admin/orders`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) return data;
+    }
+  } catch (e) {}
+
+  return getLocalOrders();
 }
 
 // -------------------------------------------------------------
 // CLOTHES & INVENTORY MANAGEMENT
 // -------------------------------------------------------------
 
-// Fetch all clothes
 export async function fetchItems() {
   try {
     const controller = new AbortController();
@@ -450,15 +460,16 @@ export async function fetchItems() {
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
-        saveLocalClothes(data);
-        return data;
+        // Filter out old static placeholder items
+        const cleanData = data.filter((x) => !x.id?.startsWith('cloth_og_'));
+        saveLocalClothes(cleanData);
+        return cleanData;
       }
     }
   } catch (err) {}
   return getLocalClothes();
 }
 
-// Create new cloth in database
 export async function createItem(clothData) {
   const newCloth = {
     ...clothData,
@@ -483,13 +494,11 @@ export async function createItem(clothData) {
     }
   } catch (err) {}
 
-  // Save to browser persistent database
   const current = getLocalClothes();
   saveLocalClothes([newCloth, ...current]);
   return newCloth;
 }
 
-// Delete cloth from database
 export async function deleteItem(id) {
   try {
     await fetch(`${API_BASE}/clothes/${id}`, { method: 'DELETE' });
@@ -499,7 +508,6 @@ export async function deleteItem(id) {
   return { success: true, deletedId: id };
 }
 
-// Update cloth
 export async function updateItem(id, clothData) {
   try {
     const res = await fetch(`${API_BASE}/clothes/${id}`, {
@@ -520,7 +528,6 @@ export async function updateItem(id, clothData) {
   return { id, ...clothData };
 }
 
-// Database Stats
 export async function fetchDbStats() {
   try {
     const res = await fetch(`${API_BASE}/stats`);
@@ -531,12 +538,14 @@ export async function fetchDbStats() {
   const totalVal = clothes.reduce((sum, c) => sum + (Number(c.price) || 0), 0);
   const availableCount = clothes.filter((c) => c.status !== 'Sold').length;
   const soldCount = clothes.filter((c) => c.status === 'Sold').length;
+  const orders = getLocalOrders();
 
   return {
     totalClothes: clothes.length,
     totalValuation: Math.round(totalVal),
     availableCount,
     soldCount,
+    orderCount: orders.length,
     status: 'Hybrid SQLite & Browser Database Active'
   };
 }
@@ -560,7 +569,6 @@ export function toggleFavorite(id) {
   return next;
 }
 
-// Export database as JSON backup file
 export function exportDatabaseJSON() {
   const data = getLocalClothes();
   const jsonStr = JSON.stringify(data, null, 2);
@@ -573,9 +581,9 @@ export function exportDatabaseJSON() {
   URL.revokeObjectURL(url);
 }
 
-// Import database from JSON backup file
 export function importDatabaseJSON(jsonArray) {
   if (!Array.isArray(jsonArray)) throw new Error('Invalid JSON format. Expected an array of clothes.');
-  saveLocalClothes(jsonArray);
-  return jsonArray;
+  const cleanItems = jsonArray.filter((x) => !x.id?.startsWith('cloth_og_'));
+  saveLocalClothes(cleanItems);
+  return cleanItems;
 }

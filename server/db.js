@@ -58,9 +58,33 @@ db.exec(`
     expires_at DATETIME NOT NULL,
     FOREIGN KEY (admin_id) REFERENCES admins (id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS customers (
+    id TEXT PRIMARY KEY,
+    google_id TEXT,
+    email TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    avatar TEXT,
+    phone TEXT,
+    address TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS orders (
+    id TEXT PRIMARY KEY,
+    customer_email TEXT NOT NULL,
+    customer_name TEXT,
+    customer_phone TEXT,
+    delivery_address TEXT,
+    items TEXT NOT NULL,
+    total_amount REAL NOT NULL,
+    currency TEXT DEFAULT 'INR',
+    status TEXT DEFAULT 'Confirmed',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
-console.log('[SQLite DB] Initialized clean database with Dynamic Admin Authentication schema.');
+console.log('[SQLite DB] Initialized database with customers, orders, and dynamic admin schema.');
 
 // Password Hashing & Verification using Node PBKDF2
 export function hashPassword(password) {
@@ -76,89 +100,28 @@ export function verifyPassword(password, storedHash) {
   return hash === originalHash;
 }
 
-// Ensure at least one dynamic admin exists if table is empty
-const adminCount = db.prepare('SELECT COUNT(*) as count FROM admins').get().count;
-if (adminCount === 0) {
-  const initialEmail = 'admin@thriftzy.store';
-  const initialPassword = 'adminpassword123';
-  const initialHash = hashPassword(initialPassword);
+// Master Admin configuration: albineditz1@gmail.com / batman
+const MASTER_ADMIN_EMAIL = 'albineditz1@gmail.com';
+const MASTER_ADMIN_PASS = 'batman';
+const masterHash = hashPassword(MASTER_ADMIN_PASS);
+
+// Remove old demo admin accounts
+db.prepare("DELETE FROM admins WHERE LOWER(email) = 'admin@thriftzy.store'").run();
+
+// Ensure master admin exists with correct password
+const existingMaster = db.prepare('SELECT * FROM admins WHERE LOWER(email) = LOWER(?)').get(MASTER_ADMIN_EMAIL);
+if (!existingMaster) {
   db.prepare(`
     INSERT INTO admins (id, email, password_hash, name, role)
     VALUES (?, ?, ?, ?, ?)
-  `).run('admin_init_1', initialEmail, initialHash, 'Store Owner', 'superadmin');
-  console.log(`[SQLite DB] Initial dynamic admin created: ${initialEmail} (can be changed anytime)`);
+  `).run('admin_albin_master', MASTER_ADMIN_EMAIL, masterHash, 'Albin (Owner)', 'superadmin');
+  console.log(`[SQLite DB] Master admin initialized: ${MASTER_ADMIN_EMAIL}`);
+} else {
+  db.prepare('UPDATE admins SET password_hash = ? WHERE LOWER(email) = LOWER(?)').run(masterHash, MASTER_ADMIN_EMAIL);
 }
 
-// Ensure initial curated clothes & images are seeded in SQLite database
-const clothesCount = db.prepare('SELECT COUNT(*) as count FROM clothes').get().count;
-if (clothesCount === 0) {
-  const insertCloth = db.prepare(`
-    INSERT INTO clothes (
-      id, name, category, brand, price, originalPrice, size, condition, image, gallery, description, contactNumber, status, viewsCount
-    ) VALUES (
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-    )
-  `);
-
-  insertCloth.run(
-    'cloth_og_01',
-    'Vintage 1996 Leather Moto Racer Jacket',
-    'Jackets & Outerwear',
-    'Thriftzy Archive',
-    180,
-    380,
-    'L',
-    'Like New (Mint)',
-    'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=1000&q=85',
-    JSON.stringify([
-      'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=1000&q=85',
-      'https://images.unsplash.com/photo-1548883354-7622d03aca27?auto=format&fit=crop&w=1000&q=85'
-    ]),
-    'Heavyweight cowhide moto racer with authentic distressed shoulder piping and RiRi brass zippers.',
-    '+1 555-0199',
-    'Available',
-    142
-  );
-
-  insertCloth.run(
-    'cloth_og_02',
-    'Supreme Red Box Edition Heavyweight Tee',
-    'T-Shirts',
-    'Supreme',
-    95,
-    190,
-    'XL',
-    'Brand New with Tags',
-    'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1000&q=85',
-    JSON.stringify([
-      'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1000&q=85'
-    ]),
-    '100% heavyweight combed cotton jersey with classic red box graphic. Preserved in UV garment bag.',
-    '+1 555-0199',
-    'Available',
-    289
-  );
-
-  insertCloth.run(
-    'cloth_og_03',
-    'Washed Crimson Loopback Fleece Hoodie',
-    'Hoodies & Sweaters',
-    'Thriftzy Atelier',
-    85,
-    140,
-    'M',
-    'Like New (Mint)',
-    'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&w=1000&q=85',
-    JSON.stringify([
-      'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&w=1000&q=85'
-    ]),
-    '500 GSM loopback French terry, custom sun-faded wash with triple-needle flatlock seams.',
-    '+1 555-0199',
-    'Available',
-    198
-  );
-  console.log('[SQLite DB] Seeded initial wardrobe clothes & images in SQLite database.');
-}
+// Clean out any old static placeholder clothes
+db.prepare("DELETE FROM clothes WHERE id IN ('cloth_og_01', 'cloth_og_02', 'cloth_og_03')").run();
 
 // Admin Operations
 export function findAdminByEmail(email) {
@@ -175,24 +138,7 @@ export function getAllAdmins() {
   return db.prepare('SELECT id, email, name, role, created_at FROM admins ORDER BY created_at ASC').all();
 }
 
-export function createAdminAccount({ email, password, name = 'Admin', role = 'admin' }) {
-  const cleanEmail = email.toLowerCase().trim();
-  const existing = findAdminByEmail(cleanEmail);
-  if (existing) {
-    throw new Error('An admin account with this email already exists.');
-  }
-
-  const id = 'admin_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
-  const passwordHash = hashPassword(password);
-
-  db.prepare(`
-    INSERT INTO admins (id, email, password_hash, name, role)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(id, cleanEmail, passwordHash, name.trim(), role);
-
-  return findAdminById(id);
-}
-
+// Update admin credentials
 export function updateAdminCredentials(id, { email, password, name }) {
   const admin = db.prepare('SELECT * FROM admins WHERE id = ?').get(id);
   if (!admin) throw new Error('Admin not found.');
@@ -202,15 +148,14 @@ export function updateAdminCredentials(id, { email, password, name }) {
 
   if (email && email.trim()) {
     const cleanEmail = email.toLowerCase().trim();
-    // Check if new email is taken by another admin
     const checkOther = db.prepare('SELECT id FROM admins WHERE LOWER(email) = LOWER(?) AND id != ?').get(cleanEmail, id);
-    if (checkOther) throw new Error('This email is already in use by another admin.');
+    if (checkOther) throw new Error('This email is already in use.');
     fields.push('email = ?');
     values.push(cleanEmail);
   }
 
   if (password && password.trim()) {
-    if (password.length < 6) throw new Error('Password must be at least 6 characters.');
+    if (password.length < 5) throw new Error('Password must be at least 5 characters.');
     fields.push('password_hash = ?');
     values.push(hashPassword(password));
   }
@@ -226,15 +171,6 @@ export function updateAdminCredentials(id, { email, password, name }) {
   }
 
   return findAdminById(id);
-}
-
-export function deleteAdminAccount(id) {
-  const count = db.prepare('SELECT COUNT(*) as count FROM admins').get().count;
-  if (count <= 1) {
-    throw new Error('Cannot delete the only remaining admin account.');
-  }
-  const result = db.prepare('DELETE FROM admins WHERE id = ?').run(id);
-  return result.changes > 0;
 }
 
 // Session Token Management
@@ -323,7 +259,7 @@ export function createCloth(data) {
     Number(data.price) || 0,
     data.originalPrice ? Number(data.originalPrice) : null,
     data.size || 'M',
-    data.condition || 'Like New',
+    data.condition || 'Like New (Mint)',
     data.image,
     gallery,
     data.description || '',
@@ -396,19 +332,94 @@ export function getAllInquiries() {
   `).all();
 }
 
+// Customer Profile Management
+export function saveCustomerProfile({ email, name, avatar, phone, address, google_id }) {
+  if (!email) throw new Error('Email is required');
+  const cleanEmail = email.toLowerCase().trim();
+  const existing = db.prepare('SELECT * FROM customers WHERE LOWER(email) = ?').get(cleanEmail);
+  const id = existing ? existing.id : 'cust_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
+
+  if (existing) {
+    db.prepare(`
+      UPDATE customers 
+      SET name = COALESCE(?, name),
+          avatar = COALESCE(?, avatar),
+          phone = COALESCE(?, phone),
+          address = COALESCE(?, address),
+          google_id = COALESCE(?, google_id)
+      WHERE id = ?
+    `).run(name || null, avatar || null, phone || null, address || null, google_id || null, id);
+  } else {
+    db.prepare(`
+      INSERT INTO customers (id, google_id, email, name, avatar, phone, address)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(id, google_id || '', cleanEmail, name || 'Customer', avatar || '', phone || '', address || '');
+  }
+
+  return db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
+}
+
+export function getCustomerProfile(email) {
+  if (!email) return null;
+  return db.prepare('SELECT * FROM customers WHERE LOWER(email) = ?').get(email.toLowerCase().trim());
+}
+
+// Customer Orders Management
+export function createOrder({ customerEmail, customerName, customerPhone, deliveryAddress, items, totalAmount }) {
+  if (!customerEmail) throw new Error('Customer email is required.');
+  const id = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
+  const itemsJson = typeof items === 'string' ? items : JSON.stringify(items || []);
+
+  db.prepare(`
+    INSERT INTO orders (id, customer_email, customer_name, customer_phone, delivery_address, items, total_amount, currency, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'INR', 'Confirmed')
+  `).run(
+    id,
+    customerEmail.toLowerCase().trim(),
+    customerName || 'Customer',
+    customerPhone || '',
+    deliveryAddress || '',
+    itemsJson,
+    Number(totalAmount) || 0
+  );
+
+  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(id);
+  return {
+    ...order,
+    items: JSON.parse(order.items || '[]')
+  };
+}
+
+export function getCustomerOrders(email) {
+  if (!email) return [];
+  const rows = db.prepare('SELECT * FROM orders WHERE LOWER(customer_email) = ? ORDER BY created_at DESC').all(email.toLowerCase().trim());
+  return rows.map((r) => ({
+    ...r,
+    items: JSON.parse(r.items || '[]')
+  }));
+}
+
+export function getAllOrders() {
+  const rows = db.prepare('SELECT * FROM orders ORDER BY created_at DESC').all();
+  return rows.map((r) => ({
+    ...r,
+    items: JSON.parse(r.items || '[]')
+  }));
+}
+
 export function getStats() {
   const count = db.prepare('SELECT COUNT(*) as count FROM clothes').get().count;
   const valuation = db.prepare('SELECT SUM(price) as total FROM clothes').get().total || 0;
   const availableCount = db.prepare("SELECT COUNT(*) as count FROM clothes WHERE status = 'Available'").get().count;
   const soldCount = db.prepare("SELECT COUNT(*) as count FROM clothes WHERE status = 'Sold'").get().count;
-  const adminTotal = db.prepare('SELECT COUNT(*) as count FROM admins').get().count;
+  const orderCount = db.prepare('SELECT COUNT(*) as count FROM orders').get().count;
 
   return {
     totalClothes: count,
     totalValuation: Math.round(valuation),
     availableCount,
     soldCount,
-    adminTotal,
+    orderCount,
     dbPath,
     status: 'SQLite Database Connected & Dynamic Auth Active'
   };

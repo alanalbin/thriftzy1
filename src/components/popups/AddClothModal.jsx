@@ -259,7 +259,7 @@ export default function AddClothModal({
                         </span>
                       </div>
                       <span className="font-extrabold text-red-600 text-base">
-                        ${formData.price || '0'}
+                        ₹{formData.price || '0'}
                       </span>
                     </div>
                   </div>
@@ -391,7 +391,7 @@ export default function AddClothModal({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-700 block mb-1">
-                  Selling Price ($) *
+                  Selling Price (₹) *
                 </label>
                 <input
                   type="number"
@@ -400,14 +400,14 @@ export default function AddClothModal({
                   step="any"
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  placeholder="45"
+                  placeholder="1499"
                   className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-900 font-bold focus:border-red-500 focus:bg-white focus:outline-none"
                 />
               </div>
 
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-700 block mb-1">
-                  Original Retail Price ($ optional)
+                  Original Retail Price (₹ optional)
                 </label>
                 <input
                   type="number"
@@ -415,7 +415,7 @@ export default function AddClothModal({
                   step="any"
                   value={formData.originalPrice}
                   onChange={(e) => setFormData({ ...formData, originalPrice: e.target.value })}
-                  placeholder="95"
+                  placeholder="2999"
                   className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-900 focus:border-red-500 focus:bg-white focus:outline-none"
                 />
               </div>
