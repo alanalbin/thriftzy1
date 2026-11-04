@@ -579,3 +579,4 @@ export default function CustomerProfileModal({
     </AnimatePresence>
   );
 }
+
