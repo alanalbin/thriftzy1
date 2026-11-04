@@ -34,3 +34,5 @@ next-env.d.ts
 # Vite cache
 .vite/
 node_modules
+
+.vercel
