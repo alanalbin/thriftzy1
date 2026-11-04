@@ -1,11 +1,17 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, Plus, Camera, Image as ImageIcon, ShieldCheck, Tag, Phone } from 'lucide-react';
+import { X, Upload, Plus, Camera, Image as ImageIcon, ShieldCheck, Tag, Phone, Save, Edit3 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import Card3D from '../3d/Card3D';
 import { CATEGORIES, SIZES, CONDITIONS } from '../../data/items';
 
-export default function AddClothModal({ isOpen, onClose, onClothAdded }) {
+export default function AddClothModal({
+  isOpen,
+  onClose,
+  onClothAdded,
+  onClothUpdated,
+  initialCloth = null
+}) {
   const [formData, setFormData] = useState({
     name: '',
     category: 'T-Shirts',
@@ -17,12 +23,49 @@ export default function AddClothModal({ isOpen, onClose, onClothAdded }) {
     description: '',
     contactNumber: '',
     image: '',
+    status: 'Available',
   });
 
   const [imagePreview, setImagePreview] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef(null);
+
+  const isEditing = Boolean(initialCloth);
+
+  useEffect(() => {
+    if (initialCloth) {
+      setFormData({
+        name: initialCloth.name || '',
+        category: initialCloth.category || 'T-Shirts',
+        brand: initialCloth.brand || 'Thriftzy',
+        price: initialCloth.price || '',
+        originalPrice: initialCloth.originalPrice || '',
+        size: initialCloth.size || 'M',
+        condition: initialCloth.condition || 'Like New (Mint)',
+        description: initialCloth.description || '',
+        contactNumber: initialCloth.contactNumber || '',
+        image: initialCloth.image || '',
+        status: initialCloth.status || 'Available',
+      });
+      setImagePreview(initialCloth.image || '');
+    } else {
+      setFormData({
+        name: '',
+        category: 'T-Shirts',
+        brand: 'Thriftzy',
+        price: '',
+        originalPrice: '',
+        size: 'M',
+        condition: 'Like New (Mint)',
+        description: '',
+        contactNumber: '',
+        image: '',
+        status: 'Available',
+      });
+      setImagePreview('');
+    }
+  }, [initialCloth, isOpen]);
 
   if (!isOpen) return null;
 
@@ -84,33 +127,23 @@ export default function AddClothModal({ isOpen, onClose, onClothAdded }) {
 
     setLoading(true);
     try {
-      await onClothAdded({
+      const payload = {
         ...formData,
         price: Number(formData.price),
         originalPrice: formData.originalPrice ? Number(formData.originalPrice) : null,
-      });
+      };
 
-      confetti({
-        particleCount: 65,
-        spread: 60,
-        origin: { y: 0.6 },
-        colors: ['#E50914', '#FF2E4D', '#FFFFFF', '#000000']
-      });
-
-      // Reset form
-      setFormData({
-        name: '',
-        category: 'T-Shirts',
-        brand: 'Thriftzy',
-        price: '',
-        originalPrice: '',
-        size: 'M',
-        condition: 'Like New (Mint)',
-        description: '',
-        contactNumber: '',
-        image: '',
-      });
-      setImagePreview('');
+      if (isEditing && onClothUpdated) {
+        await onClothUpdated(initialCloth.id, payload);
+      } else if (onClothAdded) {
+        await onClothAdded(payload);
+        confetti({
+          particleCount: 65,
+          spread: 60,
+          origin: { y: 0.6 },
+          colors: ['#E50914', '#FF2E4D', '#FFFFFF', '#000000']
+        });
+      }
 
       onClose();
     } catch (err) {
@@ -162,9 +195,7 @@ export default function AddClothModal({ isOpen, onClose, onClothAdded }) {
             damping: 24,
             stiffness: 290,
           }}
-          style={{
-            transformStyle: 'preserve-3d',
-          }}
+          style={{ transformStyle: 'preserve-3d' }}
           className="relative w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-red-500/20 z-10 flex flex-col lg:flex-row gap-8"
         >
           {/* Close button */}
@@ -179,14 +210,16 @@ export default function AddClothModal({ isOpen, onClose, onClothAdded }) {
           <div className="lg:w-5/12 flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-red-600 mb-1">
-                <Tag className="w-4 h-4" />
-                <span>Seller Listing Studio</span>
+                {isEditing ? <Edit3 className="w-4 h-4" /> : <Tag className="w-4 h-4" />}
+                <span>{isEditing ? 'Admin Editor' : 'Admin Listing Studio'}</span>
               </div>
               <h3 className="text-2xl font-black text-neutral-950">
-                List a Cloth for Sale
+                {isEditing ? 'Edit Cloth Details' : 'Add Cloth to Store'}
               </h3>
               <p className="text-xs text-neutral-500 mt-1">
-                Enter your clothing details. It will be stored permanently in the database and visible to buyers immediately.
+                {isEditing
+                  ? 'Update the price, title, or details of this item in the persistent database.'
+                  : 'Add a new piece directly to your inventory database. It will immediately show on the storefront.'}
               </p>
 
               {/* 3D Card Preview */}
@@ -233,27 +266,27 @@ export default function AddClothModal({ isOpen, onClose, onClothAdded }) {
                 </Card3D>
               </div>
 
-              {/* Tips for sellers */}
+              {/* Tips for admin */}
               <div className="mt-4 p-3 rounded-2xl bg-neutral-50 border border-neutral-100 text-xs text-neutral-600 space-y-1">
-                <span className="font-bold text-neutral-900 block">💡 Seller Tips:</span>
+                <span className="font-bold text-neutral-900 block">💡 Admin Pro Tip:</span>
                 <p className="text-[11px] leading-relaxed">
-                  Clear, well-lit photos on hangers or flat surfaces sell 3x faster. Mention measurements or fit in description.
+                  High quality photos, realistic original prices, and WhatsApp contact numbers drive instant buyer inquiries.
                 </p>
               </div>
             </div>
 
             <div className="mt-4 pt-3 border-t border-neutral-100 text-[11px] text-neutral-400 flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Saved directly in SQLite & browser database</span>
+              <span>Direct SQLite Database Insertion</span>
             </div>
           </div>
 
-          {/* Right Column: Listing Form */}
+          {/* Right Column: Form */}
           <form onSubmit={handleSubmit} className="lg:w-7/12 space-y-4">
             {/* Photo Upload Zone */}
             <div>
               <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-700 block mb-1">
-                Upload Cloth Photo *
+                Cloth Photo *
               </label>
 
               <div
@@ -294,8 +327,8 @@ export default function AddClothModal({ isOpen, onClose, onClothAdded }) {
                 <span className="text-[10px] text-neutral-400 font-semibold uppercase">Or Image URL:</span>
                 <input
                   type="url"
-                  placeholder="https://..."
-                  value={formData.image.startsWith('data:') ? '' : formData.image}
+                  placeholder="https://images.unsplash.com/..."
+                  value={formData.image && formData.image.startsWith('data:') ? '' : formData.image}
                   onChange={(e) => {
                     const url = e.target.value;
                     setImagePreview(url);
@@ -358,7 +391,7 @@ export default function AddClothModal({ isOpen, onClose, onClothAdded }) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-700 block mb-1">
-                  Your Selling Price ($) *
+                  Selling Price ($) *
                 </label>
                 <input
                   type="number"
@@ -374,7 +407,7 @@ export default function AddClothModal({ isOpen, onClose, onClothAdded }) {
 
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-700 block mb-1">
-                  Original Price ($ optional)
+                  Original Retail Price ($ optional)
                 </label>
                 <input
                   type="number"
@@ -425,19 +458,35 @@ export default function AddClothModal({ isOpen, onClose, onClothAdded }) {
               </div>
             </div>
 
-            {/* Contact / WhatsApp */}
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-700 block mb-1 flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Your WhatsApp / Phone (For Buyers to Contact You)</span>
-              </label>
-              <input
-                type="text"
-                value={formData.contactNumber}
-                onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
-                placeholder="+1 555-0199 or WhatsApp number"
-                className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-900 focus:border-red-500 focus:bg-white focus:outline-none"
-              />
+            {/* Status & Contact */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-700 block mb-1">
+                  Status
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-900 focus:border-red-500 focus:bg-white focus:outline-none"
+                >
+                  <option value="Available">Available for Sale</option>
+                  <option value="Sold">Sold / Reserved</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-700 block mb-1 flex items-center gap-1">
+                  <Phone className="w-3 h-3 text-emerald-600" />
+                  <span>WhatsApp Contact</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.contactNumber}
+                  onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+                  placeholder="+1 555-0199"
+                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-900 focus:border-red-500 focus:bg-white focus:outline-none"
+                />
+              </div>
             </div>
 
             {/* Description */}
@@ -449,7 +498,7 @@ export default function AddClothModal({ isOpen, onClose, onClothAdded }) {
                 rows={2}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Mention fit, cotton weight, measurements, or any vintage fade..."
+                placeholder="Mention fit, cotton weight, measurements, or vintage details..."
                 className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-900 focus:border-red-500 focus:bg-white focus:outline-none resize-none"
               />
             </div>
@@ -462,8 +511,14 @@ export default function AddClothModal({ isOpen, onClose, onClothAdded }) {
               type="submit"
               className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 py-3.5 text-xs font-bold text-white shadow-lg shadow-red-500/25 transition-all hover:shadow-xl hover:shadow-red-500/40"
             >
-              <Plus className="w-4 h-4" />
-              <span>{loading ? 'Publishing to Database...' : 'List Cloth For Sale'}</span>
+              {isEditing ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              <span>
+                {loading
+                  ? 'Saving to Database...'
+                  : isEditing
+                  ? 'Save Cloth Changes'
+                  : 'Add Cloth to Store Database'}
+              </span>
             </motion.button>
           </form>
         </motion.div>
@@ -471,4 +526,3 @@ export default function AddClothModal({ isOpen, onClose, onClothAdded }) {
     </AnimatePresence>
   );
 }
-

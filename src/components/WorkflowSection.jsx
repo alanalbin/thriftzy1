@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Tag, Send, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Camera, Tag, Send, CheckCircle2, ArrowRight, ShoppingBag, Plus } from 'lucide-react';
 import Scroll3DReveal from './3d/Scroll3DReveal';
 import Card3D from './3d/Card3D';
 
@@ -7,37 +7,37 @@ const STEPS = [
   {
     num: '01',
     icon: Camera,
-    title: 'Snap & Upload Clothes',
-    description: 'Take clear photos of the clothes in your wardrobe you want to sell. Upload them directly from your phone or computer with no fees.'
+    title: 'Curated 3D Vault Selection',
+    description: 'Every vintage jacket, tee, and streetwear grail is inspected and uploaded with high-resolution photos and details.'
   },
   {
     num: '02',
     icon: Tag,
-    title: 'Set Price, Size & Category',
-    description: 'Add your title, size, condition, and selling price. Everything is saved instantly into our permanent store database.'
+    title: 'Transparent Pricing & Sizes',
+    description: 'Real garment measurements, fabric condition, and authentic market value saved directly in our permanent store database.'
   },
   {
     num: '03',
     icon: Send,
-    title: 'Get Inquiries & Ship Directly',
-    description: 'Interested buyers view your clothes, add them to bag, or message you directly on WhatsApp to coordinate payment and shipping.'
+    title: 'Instant Order & WhatsApp Checkout',
+    description: 'Add clothes to your bag, reserve pieces in real-time, or chat directly via WhatsApp for lightning-fast delivery coordination.'
   }
 ];
 
-export default function WorkflowSection({ onOpenAddModal }) {
+export default function WorkflowSection({ admin = null, onOpenAddModal }) {
   return (
     <section id="how-it-works" className="py-24 bg-white relative overflow-hidden border-y border-neutral-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <Scroll3DReveal intensity={14}>
           <div className="text-center max-w-2xl mx-auto">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 text-red-600 text-xs font-bold uppercase tracking-wider border border-red-200">
-              <span>Simple 3-Step Process</span>
+              <span>Simple 3-Step Experience</span>
             </div>
             <h2 className="mt-3 text-3xl sm:text-5xl font-black text-neutral-950 uppercase tracking-tight">
-              How To Sell & Buy On <span className="gradient-text-red">Thriftzy</span>
+              How To Shop On <span className="gradient-text-red">Thriftzy</span>
             </h2>
             <p className="mt-3 text-sm sm:text-base text-neutral-600">
-              Clear your closet, turn pre-loved fashion into cash, and find one-of-a-kind vintage clothes.
+              Discover unique one-of-a-kind vintage fashion and cop authentic streetwear grails.
             </p>
           </div>
         </Scroll3DReveal>
@@ -81,13 +81,24 @@ export default function WorkflowSection({ onOpenAddModal }) {
 
         {/* Action Button */}
         <div className="mt-12 text-center">
-          <button
-            onClick={onOpenAddModal}
-            className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-neutral-950 text-white font-bold text-xs uppercase tracking-wider hover:bg-red-600 transition-colors shadow-md"
-          >
-            <span>Start Selling Your Clothes</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          {admin ? (
+            <button
+              onClick={onOpenAddModal}
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-red-600 text-white font-bold text-xs uppercase tracking-wider hover:bg-red-700 transition-colors shadow-md"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ Add Cloth (Admin)</span>
+            </button>
+          ) : (
+            <a
+              href="#store-catalog"
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-neutral-950 text-white font-bold text-xs uppercase tracking-wider hover:bg-red-600 transition-colors shadow-md"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              <span>Explore All Clothes</span>
+              <ArrowRight className="w-4 h-4" />
+            </a>
+          )}
         </div>
       </div>
     </section>

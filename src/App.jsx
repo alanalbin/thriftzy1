@@ -8,20 +8,24 @@ import BrandShowcase from './components/BrandShowcase';
 import FAQAccordion from './components/FAQAccordion';
 import Footer from './components/Footer';
 
-// Smooth 3D Outcrowd Popups
+// Smooth 3D Popups
 import QuickViewModal from './components/popups/QuickViewModal';
 import AddClothModal from './components/popups/AddClothModal';
-import DatabaseManagerModal from './components/popups/DatabaseManagerModal';
 import CartDrawerModal from './components/popups/CartDrawerModal';
+import AdminLoginModal from './components/admin/AdminLoginModal';
+import AdminDashboardModal from './components/admin/AdminDashboardModal';
 
-// Database API Services
+// Database & Admin API Services
 import {
   fetchItems,
   createItem as apiCreateItem,
+  updateItem as apiUpdateItem,
   deleteItem as apiDeleteItem,
   fetchDbStats,
   getFavorites,
-  toggleFavorite as apiToggleFavorite
+  toggleFavorite as apiToggleFavorite,
+  adminVerifySession,
+  adminLogout as apiAdminLogout
 } from './services/api';
 
 export default function App() {
@@ -33,33 +37,40 @@ export default function App() {
   const [dbStats, setDbStats] = useState({
     totalClothes: 0,
     totalValuation: 0,
-    status: 'Hybrid Database Active'
+    status: 'Database Active'
   });
   const [loading, setLoading] = useState(true);
+
+  // Dynamic Admin Authentication State
+  const [admin, setAdmin] = useState(null);
+  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
+  const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
 
   // Modal states
   const [quickViewItem, setQuickViewItem] = useState(null);
   const [isAddClothOpen, setIsAddClothOpen] = useState(false);
-  const [isDbModalOpen, setIsDbModalOpen] = useState(false);
+  const [editingCloth, setEditingCloth] = useState(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
   // Cart state
   const [cart, setCart] = useState([]);
 
-  // Load clothes and favorites on mount
+  // Load clothes, favorites, and admin session on mount
   useEffect(() => {
     async function loadData() {
       try {
-        const [fetchedClothes, stats] = await Promise.all([
+        const [fetchedClothes, stats, currentAdminSession] = await Promise.all([
           fetchItems(),
-          fetchDbStats()
+          fetchDbStats(),
+          adminVerifySession()
         ]);
         if (Array.isArray(fetchedClothes)) {
           setClothes(fetchedClothes);
         }
         if (stats) setDbStats(stats);
+        if (currentAdminSession) setAdmin(currentAdminSession);
       } catch (err) {
-        console.error('Error loading clothes:', err);
+        console.error('Error initializing app data:', err);
       } finally {
         setLoading(false);
       }
@@ -70,6 +81,7 @@ export default function App() {
 
   const featuredCloth = clothes.length > 0 ? clothes[0] : null;
 
+  // Cart Handlers
   const handleAddToCart = (item) => {
     setCart((prev) => [...prev, item]);
     setIsCartOpen(true);
@@ -83,23 +95,50 @@ export default function App() {
     setCart([]);
   };
 
+  // Favorites Handler
   const handleToggleFavorite = (id) => {
     const next = apiToggleFavorite(id);
     setFavorites(next);
   };
 
-  // Add new cloth directly to database
+  // Admin Auth Handlers
+  const handleAdminLoginSuccess = (adminUser) => {
+    setAdmin(adminUser);
+    setIsAdminDashboardOpen(true);
+  };
+
+  const handleAdminLogout = async () => {
+    await apiAdminLogout();
+    setAdmin(null);
+  };
+
+  // Cloth Management (Admin controlled)
   const handleClothAdded = async (newClothData) => {
     const saved = await apiCreateItem(newClothData);
     setClothes((prev) => [saved, ...prev.filter((c) => c.id !== saved.id)]);
     fetchDbStats().then(setDbStats).catch(() => {});
   };
 
-  // Delete cloth from database
+  const handleClothUpdated = async (id, updatedData) => {
+    const updated = await apiUpdateItem(id, updatedData);
+    setClothes((prev) => prev.map((item) => (item.id === id ? { ...item, ...updated } : item)));
+    fetchDbStats().then(setDbStats).catch(() => {});
+  };
+
   const handleDeleteCloth = async (id) => {
     await apiDeleteItem(id);
     setClothes((prev) => prev.filter((it) => it.id !== id));
     fetchDbStats().then(setDbStats).catch(() => {});
+  };
+
+  const handleOpenEditModal = (cloth) => {
+    setEditingCloth(cloth);
+    setIsAddClothOpen(true);
+  };
+
+  const handleCloseAddModal = () => {
+    setIsAddClothOpen(false);
+    setEditingCloth(null);
   };
 
   const handleDatabaseReload = (newItems) => {
@@ -117,16 +156,22 @@ export default function App() {
       extraColors={['#E50914', '#FF2E4D', '#FFFFFF', '#FFAAA6']}
       className="min-h-screen bg-[#FAFAFC] text-neutral-900 selection:bg-red-600 selection:text-white"
     >
-      {/* Navigation (Outcrowd Pill Style with Currency & Favorites) */}
+      {/* Navigation with Admin Portal Access */}
       <Navbar
+        admin={admin}
+        onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
+        onOpenAdminDashboard={() => setIsAdminDashboardOpen(true)}
+        onOpenAddModal={() => {
+          setEditingCloth(null);
+          setIsAddClothOpen(true);
+        }}
+        onAdminLogout={handleAdminLogout}
         cartCount={cart.length}
         favoritesCount={favorites.length}
         currentCurrency={currentCurrency}
         onCurrencyChange={(curr) => setCurrentCurrency(curr)}
         dbItemCount={clothes.length}
         onOpenCart={() => setIsCartOpen(true)}
-        onOpenAddModal={() => setIsAddClothOpen(true)}
-        onOpenDbModal={() => setIsDbModalOpen(true)}
         onToggleFavoritesFilter={() => setShowFavoritesOnly(!showFavoritesOnly)}
         showFavoritesOnly={showFavoritesOnly}
       />
@@ -135,14 +180,19 @@ export default function App() {
       <main>
         {/* Outcrowd 3D Hero Section */}
         <HeroSection
+          admin={admin}
+          onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
+          onOpenAdminDashboard={() => setIsAdminDashboardOpen(true)}
+          onOpenAddModal={() => {
+            setEditingCloth(null);
+            setIsAddClothOpen(true);
+          }}
           featuredCloth={featuredCloth}
           totalItemsCount={clothes.length}
-          onOpenAddModal={() => setIsAddClothOpen(true)}
-          onOpenDbModal={() => setIsDbModalOpen(true)}
           onOpenQuickView={(item) => setQuickViewItem(item)}
         />
 
-        {/* Outcrowd 3D Clothes Catalog Section */}
+        {/* 3D Clothes Catalog Section */}
         <ClothesCatalogSection
           clothes={clothes}
           favorites={favorites}
@@ -152,14 +202,32 @@ export default function App() {
           onResetFavoritesFilter={() => setShowFavoritesOnly(false)}
           onOpenQuickView={(item) => setQuickViewItem(item)}
           onAddToCart={handleAddToCart}
-          onOpenAddModal={() => setIsAddClothOpen(true)}
+          admin={admin}
+          onOpenAddModal={() => {
+            setEditingCloth(null);
+            setIsAddClothOpen(true);
+          }}
+          onOpenEditModal={handleOpenEditModal}
+          onDeleteItem={handleDeleteCloth}
         />
 
-        {/* How It Works: Snap, List, Sell */}
-        <WorkflowSection onOpenAddModal={() => setIsAddClothOpen(true)} />
+        {/* How It Works */}
+        <WorkflowSection
+          admin={admin}
+          onOpenAddModal={() => {
+            setEditingCloth(null);
+            setIsAddClothOpen(true);
+          }}
+        />
 
         {/* Brand Showcase with Thriftzy Poster */}
-        <BrandShowcase onOpenAddModal={() => setIsAddClothOpen(true)} />
+        <BrandShowcase
+          admin={admin}
+          onOpenAddModal={() => {
+            setEditingCloth(null);
+            setIsAddClothOpen(true);
+          }}
+        />
 
         {/* FAQ Accordions */}
         <FAQAccordion />
@@ -167,12 +235,17 @@ export default function App() {
 
       {/* Footer */}
       <Footer
-        onOpenAddModal={() => setIsAddClothOpen(true)}
-        onOpenDbModal={() => setIsDbModalOpen(true)}
+        admin={admin}
+        onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
+        onOpenAdminDashboard={() => setIsAdminDashboardOpen(true)}
+        onOpenAddModal={() => {
+          setEditingCloth(null);
+          setIsAddClothOpen(true);
+        }}
       />
 
-      {/* Smooth 3D Outcrowd Popups */}
-      {/* 1. Quick View Modal with 3D folding animation & WhatsApp contact */}
+      {/* Popups & Modals */}
+      {/* 1. Quick View Modal with 3D folding animation */}
       <QuickViewModal
         item={quickViewItem}
         isOpen={!!quickViewItem}
@@ -180,25 +253,41 @@ export default function App() {
         onAddToCart={handleAddToCart}
       />
 
-      {/* 2. List a Cloth Modal with local file upload & live 3D card preview */}
+      {/* 2. Admin Add & Edit Cloth Modal */}
       <AddClothModal
         isOpen={isAddClothOpen}
-        onClose={() => setIsAddClothOpen(false)}
+        initialCloth={editingCloth}
+        onClose={handleCloseAddModal}
         onClothAdded={handleClothAdded}
+        onClothUpdated={handleClothUpdated}
       />
 
-      {/* 3. Database Manager Modal with 1-Click JSON Backup & Restore */}
-      <DatabaseManagerModal
-        isOpen={isDbModalOpen}
-        onClose={() => setIsDbModalOpen(false)}
+      {/* 3. Dynamic Admin Login & Registration Modal */}
+      <AdminLoginModal
+        isOpen={isAdminLoginOpen}
+        onClose={() => setIsAdminLoginOpen(false)}
+        onLoginSuccess={handleAdminLoginSuccess}
+      />
+
+      {/* 4. Complete Admin Dashboard & Inventory Command Center */}
+      <AdminDashboardModal
+        isOpen={isAdminDashboardOpen}
+        onClose={() => setIsAdminDashboardOpen(false)}
+        admin={admin}
+        onAdminLogout={handleAdminLogout}
         items={clothes}
         dbStats={dbStats}
         onDeleteItem={handleDeleteCloth}
-        onOpenAddModal={() => setIsAddClothOpen(true)}
+        onUpdateItem={handleClothUpdated}
+        onOpenAddModal={() => {
+          setEditingCloth(null);
+          setIsAddClothOpen(true);
+        }}
+        onOpenEditModal={handleOpenEditModal}
         onDatabaseReload={handleDatabaseReload}
       />
 
-      {/* 4. Cart Drawer Modal with WhatsApp Direct Checkout */}
+      {/* 5. Cart Drawer Modal with WhatsApp Direct Checkout */}
       <CartDrawerModal
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}

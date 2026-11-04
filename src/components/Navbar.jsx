@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingBag, Search, Menu, X, Plus, Database, Sparkles, Heart } from 'lucide-react';
+import { ShoppingBag, Search, Menu, X, Plus, Shield, Sparkles, Heart, LogOut, LayoutDashboard } from 'lucide-react';
 
 export default function Navbar({
-  cartCount,
+  admin = null,
+  onOpenAdminLogin,
+  onOpenAdminDashboard,
+  onOpenAddModal,
+  onAdminLogout,
+  cartCount = 0,
   favoritesCount = 0,
   currentCurrency = 'USD',
   onCurrencyChange,
   onOpenCart,
-  onOpenAddModal,
-  onOpenDbModal,
   onToggleFavoritesFilter,
   showFavoritesOnly = false,
   dbItemCount = 0,
@@ -23,17 +26,19 @@ export default function Navbar({
     { code: 'INR', symbol: '₹' },
   ];
 
+  const adminName = admin ? (admin.name || admin.email.split('@')[0]) : null;
+
   return (
     <header className="sticky top-0 z-40 w-full backdrop-blur-2xl bg-white/90 border-b border-red-500/10 transition-all">
       {/* Top Outcrowd Ticker Bar */}
       <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white py-1.5 px-4 text-center text-[11px] font-bold tracking-wider uppercase overflow-hidden">
         <div className="flex items-center justify-center gap-4">
           <span className="flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-red-200" />
-            THRIFTZY // OUTCROWD 3D STREETWEAR STORE
+            <Sparkles className="w-3.5 h-3.5 text-red-200" />
+            THRIFTZY // STREETWEAR & VINTAGE VAULT
           </span>
           <span className="hidden sm:inline">•</span>
-          <span className="hidden sm:inline">100% PERSISTENT DATABASE & VERCEL READY</span>
+          <span className="hidden sm:inline">DYNAMIC ADMIN AUTH & SQLITE PERSISTENCE</span>
           <span className="hidden sm:inline">•</span>
           <span>FREE WORLDWIDE SHIPPING OVER $120</span>
         </div>
@@ -42,7 +47,7 @@ export default function Navbar({
       {/* Main Nav */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
-          {/* Logo with User Uploaded Image */}
+          {/* Logo */}
           <div className="flex items-center gap-3">
             <a href="#" className="flex items-center gap-2 group">
               <motion.img
@@ -55,17 +60,19 @@ export default function Navbar({
               <span className="sr-only">Thriftzy</span>
             </a>
 
-            {/* Outcrowd Clean Database Pill */}
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={onOpenDbModal}
-              className="hidden md:inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 rounded-full bg-neutral-100 text-neutral-700 border border-neutral-200/80 hover:border-red-400 hover:text-red-600 transition-all outcrowd-shadow"
-              title="Inspect Database Studio"
-            >
-              <Database className="w-3.5 h-3.5 text-red-600" />
-              <span>Vault DB ({dbItemCount})</span>
-            </motion.button>
+            {/* Admin Status Pill (if logged in) */}
+            {admin ? (
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={onOpenAdminDashboard}
+                className="hidden md:inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 rounded-full bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-all outcrowd-shadow"
+                title="Open Admin Command Center"
+              >
+                <Shield className="w-3.5 h-3.5 text-red-600" />
+                <span>Admin: {adminName}</span>
+              </motion.button>
+            ) : null}
           </div>
 
           {/* Navigation Links */}
@@ -83,7 +90,7 @@ export default function Navbar({
               <span>Favorites ({favoritesCount})</span>
             </button>
             <a href="#how-it-works" className="transition-colors hover:text-red-600">
-              How To Sell
+              How It Works
             </a>
             <a href="#about" className="transition-colors hover:text-red-600">
               Our Story
@@ -112,17 +119,54 @@ export default function Navbar({
               ))}
             </div>
 
-            {/* Outcrowd Primary Action: + Sell a Cloth */}
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={onOpenAddModal}
-              className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-red-600 via-rose-600 to-red-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-red-500/25 transition-all hover:shadow-xl hover:shadow-red-500/40"
-              title="List a new cloth for sale"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ Sell a Cloth</span>
-            </motion.button>
+            {/* Admin Logged-in Controls OR Admin Login Button */}
+            {admin ? (
+              <div className="flex items-center gap-2">
+                {/* Add Cloth Button */}
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={onOpenAddModal}
+                  className="hidden sm:flex items-center gap-1.5 rounded-full bg-gradient-to-r from-red-600 to-rose-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-red-500/25 transition-all hover:shadow-lg"
+                  title="Add new cloth to store"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>+ Add Cloth</span>
+                </motion.button>
+
+                {/* Admin Dashboard Trigger */}
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={onOpenAdminDashboard}
+                  className="flex items-center gap-1.5 rounded-full bg-neutral-950 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-neutral-800 transition-all"
+                  title="Admin Dashboard"
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5 text-red-500" />
+                  <span>Dashboard</span>
+                </motion.button>
+
+                {/* Logout Icon */}
+                <button
+                  onClick={onAdminLogout}
+                  className="p-2 rounded-xl text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  title="Sign out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={onOpenAdminLogin}
+                className="flex items-center gap-1.5 rounded-full bg-neutral-950 text-white px-4 py-2.5 text-xs font-bold shadow-md hover:bg-red-600 transition-all"
+                title="Admin Login & Management"
+              >
+                <Shield className="w-3.5 h-3.5 text-red-400" />
+                <span>Admin Login</span>
+              </motion.button>
+            )}
 
             {/* Cart Trigger */}
             <motion.button
@@ -159,26 +203,39 @@ export default function Navbar({
           exit={{ opacity: 0, height: 0 }}
           className="lg:hidden border-t border-neutral-100 bg-white px-4 py-4 space-y-3"
         >
-          <div className="flex gap-2">
+          {admin ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenAddModal();
+                }}
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl bg-red-600 text-white font-bold py-2.5 text-xs shadow-md"
+              >
+                <Plus className="w-3.5 h-3.5" /> + Add Cloth
+              </button>
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenAdminDashboard();
+                }}
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl bg-neutral-950 text-white font-bold py-2.5 text-xs"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5 text-red-500" /> Admin Studio
+              </button>
+            </div>
+          ) : (
             <button
               onClick={() => {
                 setMobileMenuOpen(false);
-                onOpenAddModal();
+                onOpenAdminLogin();
               }}
-              className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl bg-red-600 text-white font-bold py-2.5 text-xs shadow-md"
+              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-neutral-950 text-white font-bold py-3 text-xs shadow-md"
             >
-              <Plus className="w-3.5 h-3.5" /> + Sell a Cloth
+              <Shield className="w-4 h-4 text-red-500" />
+              <span>Admin Login (Dynamic Email & Password)</span>
             </button>
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                onOpenDbModal();
-              }}
-              className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl border border-neutral-200 text-neutral-800 font-bold py-2.5 text-xs"
-            >
-              <Database className="w-3.5 h-3.5 text-red-600" /> Database ({dbItemCount})
-            </button>
-          </div>
+          )}
 
           <a
             href="#store-catalog"
@@ -201,7 +258,7 @@ export default function Navbar({
             onClick={() => setMobileMenuOpen(false)}
             className="block text-xs font-bold uppercase tracking-wider text-neutral-800 py-1"
           >
-            How To Sell
+            How It Works
           </a>
           <a
             href="#about"

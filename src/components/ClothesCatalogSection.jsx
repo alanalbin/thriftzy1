@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Card3D from './3d/Card3D';
 import Scroll3DReveal from './3d/Scroll3DReveal';
-import { Plus, Eye, ShoppingBag, Tag, SlidersHorizontal, Search, MessageCircle, Phone, Heart, Star, Sparkles } from 'lucide-react';
+import { Plus, Eye, ShoppingBag, Tag, SlidersHorizontal, Search, MessageCircle, Heart, Star, Sparkles, Edit3, Trash2, Shield } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CATEGORIES, SIZES } from '../data/items';
 
@@ -13,6 +13,9 @@ export default function ClothesCatalogSection({
   onOpenQuickView,
   onAddToCart,
   onOpenAddModal,
+  onOpenEditModal,
+  onDeleteItem,
+  admin = null,
   currentCurrency = 'USD',
   showFavoritesOnly = false,
   onResetFavoritesFilter
@@ -22,6 +25,7 @@ export default function ClothesCatalogSection({
   const [priceRange, setPriceRange] = useState('all'); // 'all' | 'under50' | '50to100' | 'over100'
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
+  const [deletingId, setDeletingId] = useState(null);
 
   // Currency multiplier
   const currencyRates = { USD: 1, EUR: 0.92, GBP: 0.78, INR: 83 };
@@ -73,6 +77,18 @@ export default function ClothesCatalogSection({
     onAddToCart(item);
   };
 
+  const handleDeleteCloth = async (e, id, name) => {
+    e.stopPropagation();
+    if (window.confirm(`Admin Action: Are you sure you want to remove "${name}" from store inventory?`)) {
+      setDeletingId(id);
+      try {
+        await onDeleteItem(id);
+      } finally {
+        setDeletingId(null);
+      }
+    }
+  };
+
   const getWhatsAppLink = (item) => {
     const phone = (item.contactNumber || '').replace(/[^0-9]/g, '');
     const text = encodeURIComponent(`Hi, I'm interested in buying your "${item.name}" (Size: ${item.size}, Price: $${item.price}) on Thriftzy!`);
@@ -82,7 +98,7 @@ export default function ClothesCatalogSection({
   return (
     <section id="store-catalog" className="py-24 bg-[#FAFAFC] relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Outcrowd Section Header */}
+        {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-neutral-200">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-red-100 text-red-700 text-xs font-bold uppercase tracking-wider mb-2">
@@ -93,7 +109,7 @@ export default function ClothesCatalogSection({
               {showFavoritesOnly ? 'Saved Wishlist' : 'Wardrobe'} <span className="gradient-text-red">Collection</span>
             </h2>
             <p className="mt-2 text-sm text-neutral-600 max-w-xl">
-              Authentic clothes listed by sellers. Filter by category, size, or price, or add your own clothes to sell.
+              Authentic vintage fashion and streetwear pieces. Filter by category, size, or price to find your fit.
             </p>
           </div>
 
@@ -108,15 +124,18 @@ export default function ClothesCatalogSection({
               </button>
             )}
 
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={onOpenAddModal}
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-gradient-to-r from-red-600 to-rose-600 text-white text-xs font-bold shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/35 transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ List a Cloth For Sale</span>
-            </motion.button>
+            {/* Admin Add Cloth Button (Only visible to authenticated admin) */}
+            {admin && (
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={onOpenAddModal}
+                className="flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-gradient-to-r from-red-600 to-rose-600 text-white text-xs font-bold shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/35 transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Add Cloth (Admin)</span>
+              </motion.button>
+            )}
 
             {/* Sort Dropdown */}
             <div className="flex items-center gap-1.5 bg-white border border-neutral-200 rounded-full px-3.5 py-2 shadow-sm text-xs">
@@ -202,21 +221,25 @@ export default function ClothesCatalogSection({
                 <Tag className="w-8 h-8" />
               </div>
               <h3 className="text-xl font-bold text-neutral-900">
-                {clothes.length === 0 ? 'No Clothes Listed in Database Yet' : 'No clothes match this filter'}
+                {clothes.length === 0 ? 'No Clothes Listed in Store Yet' : 'No clothes match this filter'}
               </h3>
               <p className="mt-2 text-xs sm:text-sm text-neutral-500 max-w-md mx-auto leading-relaxed">
                 {clothes.length === 0
-                  ? 'Your store is ready for real clothes! Upload photos directly from your phone or computer, set your price, and start selling.'
+                  ? admin
+                    ? 'Your database is ready! Click "+ Add Cloth" to publish your first piece.'
+                    : 'Our catalog is currently being updated with fresh streetwear grails. Check back soon!'
                   : 'Try clearing your search query or choosing another category or size.'}
               </p>
               <div className="mt-6 flex items-center justify-center gap-3">
-                <button
-                  onClick={onOpenAddModal}
-                  className="flex items-center gap-2 px-6 py-3 rounded-full bg-red-600 text-white font-bold text-xs shadow-lg shadow-red-500/25 hover:bg-red-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>+ List a Cloth For Sale</span>
-                </button>
+                {admin && (
+                  <button
+                    onClick={onOpenAddModal}
+                    className="flex items-center gap-2 px-6 py-3 rounded-full bg-red-600 text-white font-bold text-xs shadow-lg shadow-red-500/25 hover:bg-red-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>+ Add Cloth (Admin)</span>
+                  </button>
+                )}
                 {clothes.length > 0 && (
                   <button
                     onClick={() => {
@@ -238,10 +261,12 @@ export default function ClothesCatalogSection({
               <AnimatePresence>
                 {filteredClothes.map((item, idx) => {
                   const isFavorited = favorites.includes(item.id);
+                  const isSold = item.status === 'Sold';
+
                   return (
                     <Scroll3DReveal key={item.id} intensity={15} delay={idx * 0.04}>
                       <Card3D maxTilt={13} className="h-full">
-                        <div className="h-full flex flex-col justify-between group rounded-[28px] bg-white border border-neutral-200/90 shadow-sm transition-all duration-300 hover:shadow-2xl hover:border-red-400/50 outcrowd-shadow">
+                        <div className="h-full flex flex-col justify-between group rounded-[28px] bg-white border border-neutral-200/90 shadow-sm transition-all duration-300 hover:shadow-2xl hover:border-red-400/50 outcrowd-shadow relative">
                           <div>
                             {/* Image Box */}
                             <div className="relative aspect-[4/3] w-full overflow-hidden bg-neutral-100 rounded-t-[28px]">
@@ -251,22 +276,31 @@ export default function ClothesCatalogSection({
                                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                               />
 
-                              {/* Size Badge (Outcrowd Elevated) */}
+                              {/* Sold Overlay */}
+                              {isSold && (
+                                <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center z-20">
+                                  <span className="px-4 py-1.5 rounded-full bg-neutral-900/90 border border-white/20 text-white font-black text-xs uppercase tracking-widest">
+                                    Sold Out
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Size Badge */}
                               <div
                                 style={{ transform: 'translateZ(30px)' }}
-                                className="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-md uppercase"
+                                className="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-md uppercase z-10"
                               >
                                 Size {item.size}
                               </div>
 
-                              {/* Wishlist Heart Toggle (Outcrowd Squishy Button) */}
+                              {/* Wishlist Heart Toggle */}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   onToggleFavorite(item.id);
                                 }}
                                 style={{ transform: 'translateZ(35px)' }}
-                                className={`absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 backdrop-blur-md shadow-md transition-all hover:scale-110 ${
+                                className={`absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 backdrop-blur-md shadow-md transition-all hover:scale-110 z-10 ${
                                   isFavorited ? 'text-red-600' : 'text-neutral-400 hover:text-red-600'
                                 }`}
                                 title={isFavorited ? 'Remove from favorites' : 'Save to favorites'}
@@ -277,23 +311,48 @@ export default function ClothesCatalogSection({
                               {/* Condition Tag */}
                               <div
                                 style={{ transform: 'translateZ(30px)' }}
-                                className="absolute bottom-3 left-3 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-sm text-[10px] font-bold text-white shadow-md"
+                                className="absolute bottom-3 left-3 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-sm text-[10px] font-bold text-white shadow-md z-10"
                               >
                                 {item.condition}
                               </div>
 
+                              {/* Admin Action Badges (Floating on card if admin logged in) */}
+                              {admin && (
+                                <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-20">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onOpenEditModal?.(item);
+                                    }}
+                                    className="p-2 rounded-xl bg-white/95 text-neutral-800 hover:text-red-600 hover:bg-white shadow-md text-xs font-bold flex items-center gap-1 transition-all"
+                                    title="Edit cloth"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => handleDeleteCloth(e, item.id, item.name)}
+                                    className="p-2 rounded-xl bg-red-600/90 text-white hover:bg-red-700 shadow-md text-xs font-bold flex items-center gap-1 transition-all"
+                                    title="Remove cloth"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              )}
+
                               {/* Hover Quick View Overlay */}
-                              <div className="absolute inset-0 bg-neutral-950/35 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
-                                <motion.button
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
-                                  onClick={() => onOpenQuickView(item)}
-                                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-white text-neutral-900 text-xs font-bold shadow-xl transition-transform"
-                                >
-                                  <Eye className="w-4 h-4 text-red-600" />
-                                  <span>3D Quick View</span>
-                                </motion.button>
-                              </div>
+                              {!isSold && (
+                                <div className="absolute inset-0 bg-neutral-950/35 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
+                                  <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => onOpenQuickView(item)}
+                                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-white text-neutral-900 text-xs font-bold shadow-xl transition-transform"
+                                  >
+                                    <Eye className="w-4 h-4 text-red-600" />
+                                    <span>3D Quick View</span>
+                                  </motion.button>
+                                </div>
+                              )}
                             </div>
 
                             {/* Content */}
@@ -357,15 +416,21 @@ export default function ClothesCatalogSection({
                                 <Eye className="w-4 h-4" />
                               </button>
 
-                              <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={(e) => handleAddToCart(e, item)}
-                                className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-red-600 text-white text-xs font-bold shadow-md shadow-red-500/20 hover:bg-red-700 transition-colors"
-                              >
-                                <ShoppingBag className="w-3.5 h-3.5" />
-                                <span>Add to Bag</span>
-                              </motion.button>
+                              {!isSold ? (
+                                <motion.button
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  onClick={(e) => handleAddToCart(e, item)}
+                                  className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-red-600 text-white text-xs font-bold shadow-md shadow-red-500/20 hover:bg-red-700 transition-colors"
+                                >
+                                  <ShoppingBag className="w-3.5 h-3.5" />
+                                  <span>Add to Bag</span>
+                                </motion.button>
+                              ) : (
+                                <span className="px-3 py-1.5 rounded-full bg-neutral-100 text-neutral-500 text-xs font-bold">
+                                  Sold Out
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>

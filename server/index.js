@@ -9,8 +9,19 @@ import {
   updateCloth,
   deleteCloth,
   createInquiry,
+  getAllInquiries,
   getStats,
-  clearDatabase
+  clearDatabase,
+  findAdminByEmail,
+  findAdminById,
+  getAllAdmins,
+  createAdminAccount,
+  updateAdminCredentials,
+  deleteAdminAccount,
+  createSession,
+  verifySession,
+  deleteSession,
+  verifyPassword
 } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -29,6 +40,16 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 const distPath = path.join(__dirname, '..', 'dist');
 app.use(express.static(distPath));
 
+// Helper to extract authenticated admin
+function getAdminFromReq(req) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.startsWith('Bearer ')
+    ? authHeader.slice(7)
+    : req.query.token;
+  if (!token) return null;
+  return verifySession(token);
+}
+
 // API Routes
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', serverTime: new Date().toISOString() });
@@ -38,6 +59,142 @@ app.get('/api/stats', (req, res) => {
   try {
     const stats = getStats();
     res.json(stats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin Dynamic Authentication Routes
+app.post('/api/admin/login', (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    const admin = findAdminByEmail(email);
+    if (!admin) {
+      return res.status(401).json({ error: 'No admin found with this email ID.' });
+    }
+
+    const matches = verifyPassword(password, admin.password_hash);
+    if (!matches) {
+      return res.status(401).json({ error: 'Incorrect password for this email ID.' });
+    }
+
+    const session = createSession(admin.id);
+    res.json({
+      success: true,
+      token: session.token,
+      expiresAt: session.expiresAt,
+      admin: {
+        id: admin.id,
+        email: admin.email,
+        name: admin.name,
+        role: admin.role,
+        created_at: admin.created_at
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/register', (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+    if (!email.includes('@') || !email.includes('.')) {
+      return res.status(400).json({ error: 'Please enter a valid email address.' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    }
+
+    const newAdmin = createAdminAccount({
+      email,
+      password,
+      name: name || 'Admin',
+      role: 'admin'
+    });
+
+    const session = createSession(newAdmin.id);
+    res.status(201).json({
+      success: true,
+      token: session.token,
+      expiresAt: session.expiresAt,
+      admin: newAdmin
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/me', (req, res) => {
+  const admin = getAdminFromReq(req);
+  if (!admin) {
+    return res.status(401).json({ error: 'Not authenticated as admin.' });
+  }
+  res.json({ success: true, admin });
+});
+
+app.post('/api/admin/logout', (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : req.body.token;
+  if (token) deleteSession(token);
+  res.json({ success: true, message: 'Logged out successfully.' });
+});
+
+app.get('/api/admin/list', (req, res) => {
+  try {
+    const admins = getAllAdmins();
+    res.json(admins);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/admin/credentials', (req, res) => {
+  try {
+    const admin = getAdminFromReq(req);
+    if (!admin) {
+      return res.status(401).json({ error: 'Unauthorized.' });
+    }
+
+    const { email, password, name, currentPassword } = req.body;
+    if (currentPassword) {
+      const fullAdmin = findAdminByEmail(admin.email);
+      if (!fullAdmin || !verifyPassword(currentPassword, fullAdmin.password_hash)) {
+        return res.status(400).json({ error: 'Current password is incorrect.' });
+      }
+    }
+
+    const updated = updateAdminCredentials(admin.id, { email, password, name });
+    res.json({ success: true, admin: updated });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.delete('/api/admin/:id', (req, res) => {
+  try {
+    const admin = getAdminFromReq(req);
+    if (!admin) {
+      return res.status(401).json({ error: 'Unauthorized.' });
+    }
+    deleteAdminAccount(req.params.id);
+    res.json({ success: true, deletedId: req.params.id });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/inquiries', (req, res) => {
+  try {
+    const list = getAllInquiries();
+    res.json(list);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
