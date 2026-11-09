@@ -120,6 +120,11 @@ export async function adminLogin(email, password) {
     });
     clearTimeout(timeout);
 
+    const isJson = res.headers.get('content-type')?.includes('application/json');
+    if (!isJson) {
+      throw new Error('Offline fallback: non-json response');
+    }
+
     const data = await res.json();
     if (!res.ok) {
       throw new Error(data.error || 'Failed to login as admin');
@@ -133,7 +138,12 @@ export async function adminLogin(email, password) {
     saveAdminSession(session);
     return session;
   } catch (err) {
-    if (err.name !== 'AbortError' && !err.message.includes('fetch')) {
+    if (
+      err.name !== 'AbortError' &&
+      !err.message.includes('fetch') &&
+      !err.message.includes('Offline fallback') &&
+      !err.message.includes('Unexpected token')
+    ) {
       throw err;
     }
 
@@ -313,15 +323,18 @@ export async function customerGoogleLogin({ email, name, avatar, phone, address,
   const cleanEmail = (email || '').trim().toLowerCase();
   if (!cleanEmail) throw new Error('Email is required for Google Sign-in.');
 
+  const existing = getCustomerProfile();
+  const isSame = existing?.email?.toLowerCase() === cleanEmail;
+
   const customerData = {
-    id: 'cust_' + Date.now().toString(36),
-    google_id: google_id || 'goog_' + Date.now().toString(36),
+    id: (isSame && existing?.id) ? existing.id : 'cust_' + Date.now().toString(36),
+    google_id: google_id || (isSame ? existing?.google_id : '') || 'goog_' + Date.now().toString(36),
     email: cleanEmail,
-    name: name || cleanEmail.split('@')[0],
-    avatar: avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name || cleanEmail)}`,
-    phone: phone || '',
-    address: address || '',
-    created_at: new Date().toISOString()
+    name: name || (isSame ? existing?.name : '') || cleanEmail.split('@')[0],
+    avatar: avatar || (isSame ? existing?.avatar : '') || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name || cleanEmail)}`,
+    phone: phone || (isSame ? existing?.phone : '') || '',
+    address: address || (isSame ? existing?.address : '') || '',
+    created_at: (isSame && existing?.created_at) ? existing.created_at : new Date().toISOString()
   };
 
   try {
@@ -330,7 +343,7 @@ export async function customerGoogleLogin({ email, name, avatar, phone, address,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(customerData)
     });
-    if (res.ok) {
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
       const data = await res.json();
       if (data.customer) {
         saveCustomerProfile(data.customer);
@@ -354,7 +367,7 @@ export async function updateCustomerProfile(updates) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(merged)
     });
-    if (res.ok) {
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
       const data = await res.json();
       if (data.customer) {
         saveCustomerProfile(data.customer);
@@ -396,7 +409,7 @@ export async function fetchCustomerCart(email) {
   if (!email) return [];
   try {
     const res = await fetch(`${API_BASE}/customer/cart?email=${encodeURIComponent(email)}`);
-    if (res.ok) {
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
       const data = await res.json();
       if (Array.isArray(data)) {
         saveLocalCustomerCart(email, data);
@@ -415,7 +428,7 @@ export async function addClothToCustomerCart(email, item) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, item })
     });
-    if (res.ok) {
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
       const data = await res.json();
       if (Array.isArray(data.cart)) {
         saveLocalCustomerCart(email, data.cart);
@@ -438,7 +451,7 @@ export async function removeClothFromCustomerCart(email, clothId) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, clothId })
     });
-    if (res.ok) {
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
       const data = await res.json();
       if (Array.isArray(data.cart)) {
         saveLocalCustomerCart(email, data.cart);
@@ -505,7 +518,7 @@ export async function createCustomerOrder(orderData) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newOrder)
     });
-    if (res.ok) {
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
       const data = await res.json();
       if (data.order) {
         const local = getLocalOrders();
@@ -523,20 +536,20 @@ export async function createCustomerOrder(orderData) {
 export async function getCustomerOrders(email) {
   try {
     const res = await fetch(`${API_BASE}/customer/orders?email=${encodeURIComponent(email)}`);
-    if (res.ok) {
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
       const data = await res.json();
       if (Array.isArray(data)) return data;
     }
   } catch (e) {}
 
   const local = getLocalOrders();
-  return local.filter((o) => o.customerEmail?.toLowerCase() === email?.toLowerCase());
+  return local.filter((o) => (o.customerEmail || o.customer_email || '').toLowerCase() === email.toLowerCase());
 }
 
 export async function getAllOrders() {
   try {
     const res = await fetch(`${API_BASE}/admin/orders`);
-    if (res.ok) {
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
       const data = await res.json();
       if (Array.isArray(data)) return data;
     }
@@ -556,7 +569,7 @@ export async function fetchItems() {
     const res = await fetch(`${API_BASE}/clothes`, { signal: controller.signal });
     clearTimeout(timeout);
 
-    if (res.ok) {
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
       const data = await res.json();
       if (Array.isArray(data)) {
         // Filter out old static placeholder items
@@ -585,7 +598,7 @@ export async function createItem(clothData) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newCloth),
     });
-    if (res.ok) {
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
       const saved = await res.json();
       const current = getLocalClothes();
       saveLocalClothes([saved, ...current.filter((x) => x.id !== saved.id)]);
@@ -614,7 +627,7 @@ export async function updateItem(id, clothData) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(clothData),
     });
-    if (res.ok) {
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
       const updated = await res.json();
       const current = getLocalClothes();
       saveLocalClothes(current.map((it) => (it.id === id ? updated : it)));
@@ -630,7 +643,9 @@ export async function updateItem(id, clothData) {
 export async function fetchDbStats() {
   try {
     const res = await fetch(`${API_BASE}/stats`);
-    if (res.ok) return await res.json();
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
+      return await res.json();
+    }
   } catch (e) {}
 
   const clothes = getLocalClothes();

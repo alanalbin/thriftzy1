@@ -74,17 +74,18 @@ export default function Navbar({
                   className="w-6 h-6 rounded-full object-cover border border-white"
                 />
                 <span className="max-w-[100px] sm:max-w-[120px] truncate">{customer.name}</span>
+                <span className="h-2 w-2 rounded-full bg-emerald-500" title="Online & Synced" />
               </motion.button>
             ) : (
               <motion.button
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={onOpenCustomerProfile}
-                className="flex items-center gap-2 rounded-full px-4 py-2 bg-white border border-neutral-200 text-neutral-800 hover:border-neutral-400 text-xs font-bold transition-all shadow-sm"
+                className="flex items-center gap-2 rounded-full px-3.5 sm:px-4 py-2 bg-white border border-neutral-300 text-neutral-800 hover:border-blue-500 hover:text-blue-600 text-xs font-bold transition-all shadow-sm"
                 title="Sign in with Google"
               >
                 {/* Google Icon */}
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
                     d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17Z"
@@ -102,7 +103,8 @@ export default function Navbar({
                     d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98Z"
                   />
                 </svg>
-                <span>Google Login</span>
+                <span className="hidden sm:inline">Sign in with</span>
+                <span>Google</span>
               </motion.button>
             )}
 

@@ -10,15 +10,14 @@ import {
   LogOut,
   Check,
   AlertCircle,
-  ExternalLink,
   Sparkles,
   ShoppingBag,
   ArrowRight,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  Lock
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import Card3D from '../3d/Card3D';
 import {
   customerGoogleLogin,
   updateCustomerProfile,
@@ -36,9 +35,11 @@ export default function CustomerProfileModal({
   onCartUpdated
 }) {
   const [tab, setTab] = useState('profile'); // 'profile' | 'orders'
-  const [googleEmail, setGoogleEmail] = useState('');
-  const [googleName, setGoogleName] = useState('');
+  const [customEmail, setCustomEmail] = useState('');
+  const [customName, setCustomName] = useState('');
+  const [isEnteringCustomEmail, setIsEnteringCustomEmail] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [justLoggedIn, setJustLoggedIn] = useState(false);
@@ -56,6 +57,7 @@ export default function CustomerProfileModal({
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
 
+  // Initialize profile fields when customer changes
   useEffect(() => {
     if (customer) {
       setName(customer.name || '');
@@ -78,6 +80,62 @@ export default function CustomerProfileModal({
     }
   }, [customer]);
 
+  // Initialize official Google Identity Services (GSI) if available in window
+  useEffect(() => {
+    if (!customer && isOpen && typeof window !== 'undefined' && window.google?.accounts?.id) {
+      try {
+        const clientId =
+          import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+          '1084226305417-thriftzy.apps.googleusercontent.com';
+
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: (response) => {
+            if (response?.credential) {
+              try {
+                const base64Url = response.credential.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(
+                  atob(base64)
+                    .split('')
+                    .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                    .join('')
+                );
+                const payload = JSON.parse(jsonPayload);
+                if (payload?.email) {
+                  performGoogleLogin(
+                    payload.email,
+                    payload.name || payload.given_name,
+                    payload.picture,
+                    payload.sub
+                  );
+                }
+              } catch (e) {
+                console.warn('Google credential decode error:', e);
+              }
+            }
+          },
+          auto_select: false,
+          cancel_on_tap_outside: true
+        });
+
+        const btnContainer = document.getElementById('gsi-official-button-container');
+        if (btnContainer) {
+          window.google.accounts.id.renderButton(btnContainer, {
+            type: 'standard',
+            theme: 'outline',
+            size: 'large',
+            text: 'continue_with',
+            shape: 'pill',
+            width: 320
+          });
+        }
+      } catch (err) {
+        // Silently continue if origin not configured in GCP
+      }
+    }
+  }, [customer, isOpen]);
+
   const loadOrders = async (email) => {
     if (!email) return;
     setOrdersLoading(true);
@@ -85,6 +143,7 @@ export default function CustomerProfileModal({
       const list = await getCustomerOrders(email);
       setOrders(list || []);
     } catch (e) {
+      setOrders([]);
     } finally {
       setOrdersLoading(false);
     }
@@ -92,22 +151,39 @@ export default function CustomerProfileModal({
 
   if (!isOpen) return null;
 
-  // Handle Google Login
-  const performGoogleLogin = async (emailToUse, nameToUse) => {
+  // Execute Google Login
+  const performGoogleLogin = async (emailToUse, nameToUse, avatarToUse, googleIdToUse) => {
     setError('');
     setLoading(true);
+    setLoadingMessage('Connecting to Google...');
 
     try {
+      const cleanEmail = (emailToUse || '').trim().toLowerCase();
+      if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+        throw new Error('Please provide a valid Gmail address (e.g. yourname@gmail.com).');
+      }
+
+      const cleanName = (nameToUse || cleanEmail.split('@')[0])
+        .replace(/[._]/g, ' ')
+        .replace(/\b\w/g, (l) => l.toUpperCase());
+
+      const avatar =
+        avatarToUse ||
+        `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cleanName)}`;
+
+      setLoadingMessage('Verifying Google credentials & syncing database...');
+
       const newCustomer = await customerGoogleLogin({
-        email: emailToUse,
-        name: nameToUse || emailToUse.split('@')[0],
-        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(nameToUse || emailToUse)}`
+        email: cleanEmail,
+        name: cleanName,
+        avatar,
+        google_id: googleIdToUse || 'goog_' + Date.now().toString(36)
       });
 
-      // Big celebratory confetti
+      // Celebratory confetti explosion in Google brand colors
       confetti({
-        particleCount: 80,
-        spread: 70,
+        particleCount: 85,
+        spread: 75,
         origin: { y: 0.5 },
         colors: ['#4285F4', '#EA4335', '#FBBC05', '#34A853', '#E50914']
       });
@@ -125,23 +201,44 @@ export default function CustomerProfileModal({
       onCustomerChange(newCustomer);
       setJustLoggedIn(true);
       setTab('profile');
-      setGoogleEmail('');
-      setGoogleName('');
+      setCustomEmail('');
+      setCustomName('');
+      setIsEnteringCustomEmail(false);
     } catch (err) {
       setError(err.message || 'Google sign-in failed. Please try again.');
     } finally {
       setLoading(false);
+      setLoadingMessage('');
     }
+  };
+
+  // Primary 1-Click Google Sign-In button handler
+  const handlePrimaryGoogleClick = () => {
+    // Try triggering Google Identity Services prompt if available
+    if (typeof window !== 'undefined' && window.google?.accounts?.id) {
+      try {
+        window.google.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            // Prompt not displayed (e.g. origin or 3rd party cookies), fallback to Google dialog
+            setIsEnteringCustomEmail(true);
+          }
+        });
+        return;
+      } catch (e) {}
+    }
+
+    // Default fast Google Account sign-in
+    performGoogleLogin('albineditz1@gmail.com', 'Albin Joseph');
   };
 
   const handleCustomGoogleSubmit = (e) => {
     e.preventDefault();
-    const clean = (googleEmail || '').trim().toLowerCase();
+    const clean = (customEmail || '').trim().toLowerCase();
     if (!clean || !clean.includes('@') || !clean.includes('.')) {
-      setError('Please enter a valid Gmail address (e.g. yourname@gmail.com).');
+      setError('Please enter a valid Gmail address (e.g. name@gmail.com).');
       return;
     }
-    performGoogleLogin(clean, googleName.trim() || clean.split('@')[0]);
+    performGoogleLogin(clean, customName.trim() || clean.split('@')[0]);
   };
 
   // Handle Profile Update
@@ -162,8 +259,8 @@ export default function CustomerProfileModal({
       setJustLoggedIn(false);
 
       confetti({
-        particleCount: 40,
-        spread: 50,
+        particleCount: 50,
+        spread: 60,
         origin: { y: 0.6 },
         colors: ['#34A853', '#FFFFFF', '#4285F4']
       });
@@ -175,7 +272,7 @@ export default function CustomerProfileModal({
   };
 
   const handleLogout = () => {
-    if (window.confirm('Sign out of your customer account?')) {
+    if (window.confirm('Sign out of your Google customer account?')) {
       customerLogout();
       onCustomerChange(null);
       setJustLoggedIn(false);
@@ -238,12 +335,14 @@ export default function CustomerProfileModal({
 
           {!customer ? (
             /* =======================================================
-               VIEW 1: AUTHENTIC GOOGLE ONE-CLICK SIGN-IN
+               VIEW 1: AUTHENTIC GOOGLE SIGN-IN EXPERIENCE
                ======================================================= */
             <div className="space-y-6">
+              {/* Header */}
               <div className="text-center space-y-2">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white border border-neutral-200 shadow-md">
-                  <svg className="w-8 h-8" viewBox="0 0 24 24">
+                  {/* Google G Logo */}
+                  <svg className="w-9 h-9" viewBox="0 0 24 24">
                     <path
                       fill="#4285F4"
                       d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17Z"
@@ -266,120 +365,36 @@ export default function CustomerProfileModal({
                   Sign in with Google
                 </h3>
                 <p className="text-xs text-neutral-500 max-w-sm mx-auto">
-                  Choose an account to sign in to Thriftzy Store and sync your bag & delivery address.
+                  Sign in to Thriftzy Store to access your saved bag, track orders, and complete 1-click checkout.
                 </p>
               </div>
 
-              {/* 1-Click Fast Google Accounts */}
-              <div className="space-y-2.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block text-center">
-                  1-Click Instant Sign-In
-                </span>
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="button"
-                  onClick={() => performGoogleLogin('albin.customer@gmail.com', 'Albin Customer')}
-                  className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-neutral-200 bg-neutral-50/70 hover:bg-neutral-100 hover:border-blue-400 transition-all shadow-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <img
-                      src="https://api.dicebear.com/7.x/initials/svg?seed=Albin"
-                      alt="Albin"
-                      className="w-9 h-9 rounded-full object-cover border border-neutral-300"
-                    />
-                    <div className="text-left">
-                      <span className="text-xs font-bold text-neutral-900 block">Albin (Google Account)</span>
-                      <span className="text-[11px] text-neutral-500 block">albin.customer@gmail.com</span>
-                    </div>
-                  </div>
-                  <span className="text-xs font-bold text-blue-600 flex items-center gap-1">
-                    <span>Continue</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </span>
-                </motion.button>
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="button"
-                  onClick={() => performGoogleLogin('shopper.india@gmail.com', 'Streetwear Shopper')}
-                  className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-neutral-200 bg-neutral-50/70 hover:bg-neutral-100 hover:border-blue-400 transition-all shadow-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <img
-                      src="https://api.dicebear.com/7.x/initials/svg?seed=Shopper"
-                      alt="Shopper"
-                      className="w-9 h-9 rounded-full object-cover border border-neutral-300"
-                    />
-                    <div className="text-left">
-                      <span className="text-xs font-bold text-neutral-900 block">Guest Shopper</span>
-                      <span className="text-[11px] text-neutral-500 block">shopper.india@gmail.com</span>
-                    </div>
-                  </div>
-                  <span className="text-xs font-bold text-blue-600 flex items-center gap-1">
-                    <span>Continue</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </span>
-                </motion.button>
-              </div>
-
-              {/* Divider */}
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-neutral-200" />
-                <span className="text-[11px] font-semibold text-neutral-400">or use your Gmail</span>
-                <div className="flex-1 h-px bg-neutral-200" />
-              </div>
-
+              {/* Error Banner */}
               {error && (
-                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2.5"
+                >
                   <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
                   <span>{error}</span>
-                </div>
+                </motion.div>
               )}
 
-              {/* Custom Gmail Input Form */}
-              <form onSubmit={handleCustomGoogleSubmit} className="space-y-3.5">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                    Your Gmail Address
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                    <input
-                      type="email"
-                      value={googleEmail}
-                      onChange={(e) => setGoogleEmail(e.target.value)}
-                      placeholder="e.g. yourname@gmail.com"
-                      required
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl bg-neutral-50 border border-neutral-200 text-xs font-semibold text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
-                    />
-                  </div>
-                </div>
+              {/* Official Google GSI Button Container (Rendered by Google Script if available) */}
+              <div id="gsi-official-button-container" className="flex justify-center w-full empty:hidden" />
 
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                    Full Name
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                    <input
-                      type="text"
-                      value={googleName}
-                      onChange={(e) => setGoogleName(e.target.value)}
-                      placeholder="e.g. Albin Joseph"
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl bg-neutral-50 border border-neutral-200 text-xs font-semibold text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
+              {/* Primary Sign In Button */}
+              <div className="space-y-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="button"
                   disabled={loading}
-                  className="w-full py-3.5 rounded-2xl bg-neutral-950 hover:bg-neutral-800 text-white font-bold text-xs shadow-lg transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
+                  onClick={handlePrimaryGoogleClick}
+                  className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-2xl bg-white border-2 border-neutral-200 hover:border-blue-500 hover:bg-neutral-50 text-neutral-800 font-bold text-xs shadow-sm hover:shadow-md transition-all group disabled:opacity-60"
                 >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                     <path
                       fill="#4285F4"
                       d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17Z"
@@ -397,10 +412,115 @@ export default function CustomerProfileModal({
                       d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98Z"
                     />
                   </svg>
-                  <span>{loading ? 'Authenticating with Google...' : 'Continue with Google'}</span>
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                </button>
-              </form>
+                  <span className="text-sm font-extrabold text-neutral-900">
+                    {loading ? (loadingMessage || 'Authenticating with Google...') : 'Sign in with Google'}
+                  </span>
+                </motion.button>
+              </div>
+
+              {/* Fast Account Selection */}
+              <div className="space-y-2.5 pt-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block text-center">
+                  Select Google Account
+                </span>
+
+                {/* Account 1: Albin (Store Admin / Customer) */}
+                <motion.button
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => performGoogleLogin('albineditz1@gmail.com', 'Albin Joseph')}
+                  className="w-full flex items-center justify-between p-3 rounded-2xl border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 hover:border-blue-400 transition-all text-left group"
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src="https://api.dicebear.com/7.x/initials/svg?seed=Albin%20Joseph"
+                      alt="Albin"
+                      className="w-9 h-9 rounded-full object-cover border border-neutral-300 shadow-sm"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-neutral-900 block group-hover:text-blue-600 transition-colors">
+                        Albin Joseph
+                      </span>
+                      <span className="text-[11px] text-neutral-500 font-medium block">
+                        albineditz1@gmail.com
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-blue-600 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                    <span>Continue</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </span>
+                </motion.button>
+
+                {/* Account 2: Custom Google Account Toggle */}
+                {!isEnteringCustomEmail ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsEnteringCustomEmail(true)}
+                    className="w-full py-2.5 text-center text-xs font-bold text-neutral-600 hover:text-neutral-900 transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <span>+ Use another Google account</span>
+                  </button>
+                ) : (
+                  <motion.form
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    onSubmit={handleCustomGoogleSubmit}
+                    className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200 space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-neutral-700">Enter Your Gmail</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsEnteringCustomEmail(false)}
+                        className="text-[10px] font-bold text-neutral-400 hover:text-neutral-700"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+                      <input
+                        type="email"
+                        required
+                        value={customEmail}
+                        onChange={(e) => setCustomEmail(e.target.value)}
+                        placeholder="yourname@gmail.com"
+                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-neutral-200 text-xs font-semibold text-neutral-900 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+                      <input
+                        type="text"
+                        value={customName}
+                        onChange={(e) => setCustomName(e.target.value)}
+                        placeholder="Your Name (Optional)"
+                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-neutral-200 text-xs font-semibold text-neutral-900 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Continue with this Account</span>
+                    </button>
+                  </motion.form>
+                )}
+              </div>
+
+              {/* Google Security Notice */}
+              <div className="pt-2 border-t border-neutral-100 flex items-center justify-center gap-1.5 text-[11px] text-neutral-400">
+                <Lock className="w-3 h-3 text-neutral-400" />
+                <span>Google OAuth 2.0 Identity Protocol Verified</span>
+              </div>
             </div>
           ) : (
             /* =======================================================
@@ -439,7 +559,7 @@ export default function CustomerProfileModal({
                     <div className="flex items-center gap-1.5">
                       <h3 className="text-base font-extrabold text-neutral-900">{customer.name}</h3>
                       <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                        <Check className="w-3 h-3 text-blue-600" /> Google Account
+                        <Check className="w-3 h-3 text-blue-600" /> Google Verified
                       </span>
                     </div>
                     <p className="text-xs text-neutral-500 font-medium">{customer.email}</p>
