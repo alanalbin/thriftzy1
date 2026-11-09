@@ -38,7 +38,8 @@ import {
   adminGetList,
   exportDatabaseJSON,
   importDatabaseJSON,
-  getAllOrders
+  getAllOrders,
+  fetchAllCustomers
 } from '../../services/api';
 
 export default function AdminPage({
@@ -63,6 +64,8 @@ export default function AdminPage({
   const [authSuccess, setAuthSuccess] = useState('');
   const [customerOrders, setCustomerOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [customersList, setCustomersList] = useState([]);
+  const [customersLoading, setCustomersLoading] = useState(false);
 
   // Dashboard Controls
   const [searchQuery, setSearchQuery] = useState('');
@@ -109,11 +112,12 @@ export default function AdminPage({
   const [newAdminLoading, setNewAdminLoading] = useState(false);
   const [adminList, setAdminList] = useState([]);
 
-  // Load admins and customer orders if logged in
+  // Load admins, customer orders, and customer accounts if logged in
   useEffect(() => {
     if (admin) {
       loadAdmins();
       loadCustomerOrders();
+      loadCustomers();
     }
   }, [admin]);
 
@@ -132,6 +136,17 @@ export default function AdminPage({
     } catch (e) {
     } finally {
       setOrdersLoading(false);
+    }
+  };
+
+  const loadCustomers = async () => {
+    setCustomersLoading(true);
+    try {
+      const list = await fetchAllCustomers();
+      setCustomersList(list || []);
+    } catch (e) {
+    } finally {
+      setCustomersLoading(false);
     }
   };
 
@@ -1254,6 +1269,87 @@ export default function AdminPage({
                               </a>
                             )}
                           </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Google & Firebase Customers Database Directory */}
+                <div className="p-6 sm:p-8 rounded-[32px] bg-white border border-neutral-200/90 shadow-xl outcrowd-shadow space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                        <User className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-neutral-900">
+                          Google & Firebase Customers Database
+                        </h3>
+                        <p className="text-xs text-neutral-500">
+                          Registered user accounts ({customersList.length} total)
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={loadCustomers}
+                      className="p-2 text-neutral-500 hover:text-red-600 hover:bg-neutral-100 rounded-xl transition-colors"
+                      title="Refresh Customers"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${customersLoading ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+
+                  {customersLoading ? (
+                    <div className="text-center py-6 text-xs text-neutral-400">Loading customers...</div>
+                  ) : customersList.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-neutral-500 bg-neutral-50 rounded-2xl border border-neutral-200/60 p-4">
+                      No customer accounts registered yet. When users sign in with their Google or Firebase account, their profile details and saved shipping address are stored in this database.
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                      {customersList.map((cust) => (
+                        <div
+                          key={cust.id || cust.email}
+                          className="p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 text-xs space-y-2"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                              <img
+                                src={cust.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${cust.name}`}
+                                alt={cust.name}
+                                className="w-8 h-8 rounded-full object-cover border border-neutral-300"
+                              />
+                              <div>
+                                <span className="font-bold text-neutral-950 block">{cust.name}</span>
+                                <span className="text-neutral-500 text-[11px] block">{cust.email}</span>
+                              </div>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200">
+                              {cust.auth_provider === 'firebase_google' ? 'Firebase Google' : 'Google Auth'}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-[11px] text-neutral-600 pt-1">
+                            <div>
+                              {cust.phone ? (
+                                <span className="text-neutral-700 block font-mono">📞 {cust.phone}</span>
+                              ) : (
+                                <span className="text-neutral-400 italic block">No phone saved</span>
+                              )}
+                            </div>
+                            <div className="text-right text-[10px] text-neutral-400">
+                              {cust.created_at ? new Date(cust.created_at).toLocaleDateString('en-IN') : 'Recently'}
+                            </div>
+                          </div>
+
+                          {cust.address && (
+                            <div className="text-[11px] text-neutral-600 bg-white p-2 rounded-xl border border-neutral-200">
+                              <span className="font-bold text-neutral-800">Delivery Address: </span>
+                              {cust.address}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

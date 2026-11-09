@@ -92,6 +92,12 @@ db.exec(`
   );
 `);
 
+// Ensure customer schema has Firebase and login tracking columns
+try { db.exec(`ALTER TABLE customers ADD COLUMN firebase_uid TEXT;`); } catch (e) {}
+try { db.exec(`ALTER TABLE customers ADD COLUMN auth_provider TEXT DEFAULT 'google';`); } catch (e) {}
+try { db.exec(`ALTER TABLE customers ADD COLUMN last_login_at DATETIME;`); } catch (e) {}
+try { db.exec(`ALTER TABLE customers ADD COLUMN updated_at DATETIME;`); } catch (e) {}
+
 console.log('[SQLite DB] Initialized database with customers, orders, and dynamic admin schema.');
 
 // Password Hashing & Verification using Node PBKDF2
@@ -340,12 +346,13 @@ export function getAllInquiries() {
   `).all();
 }
 
-// Customer Profile Management
-export function saveCustomerProfile({ email, name, avatar, phone, address, google_id }) {
+// Customer Profile Management (Stores Google Sign-In & Firebase User Data)
+export function saveCustomerProfile({ email, name, avatar, phone, address, google_id, firebase_uid, auth_provider }) {
   if (!email) throw new Error('Email is required');
   const cleanEmail = email.toLowerCase().trim();
   const existing = db.prepare('SELECT * FROM customers WHERE LOWER(email) = ?').get(cleanEmail);
   const id = existing ? existing.id : 'cust_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
+  const now = new Date().toISOString();
 
   if (existing) {
     db.prepare(`
@@ -354,17 +361,49 @@ export function saveCustomerProfile({ email, name, avatar, phone, address, googl
           avatar = COALESCE(?, avatar),
           phone = COALESCE(?, phone),
           address = COALESCE(?, address),
-          google_id = COALESCE(?, google_id)
+          google_id = COALESCE(?, google_id),
+          firebase_uid = COALESCE(?, firebase_uid),
+          auth_provider = COALESCE(?, auth_provider),
+          last_login_at = ?,
+          updated_at = ?
       WHERE id = ?
-    `).run(name || null, avatar || null, phone || null, address || null, google_id || null, id);
+    `).run(
+      name || null,
+      avatar || null,
+      phone || null,
+      address || null,
+      google_id || null,
+      firebase_uid || null,
+      auth_provider || null,
+      now,
+      now,
+      id
+    );
   } else {
     db.prepare(`
-      INSERT INTO customers (id, google_id, email, name, avatar, phone, address)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(id, google_id || '', cleanEmail, name || 'Customer', avatar || '', phone || '', address || '');
+      INSERT INTO customers (id, google_id, firebase_uid, auth_provider, email, name, avatar, phone, address, last_login_at, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      google_id || '',
+      firebase_uid || '',
+      auth_provider || 'firebase_google',
+      cleanEmail,
+      name || 'Customer',
+      avatar || '',
+      phone || '',
+      address || '',
+      now,
+      now,
+      now
+    );
   }
 
   return db.prepare('SELECT * FROM customers WHERE id = ?').get(id);
+}
+
+export function getAllCustomers() {
+  return db.prepare('SELECT id, email, name, avatar, phone, address, auth_provider, firebase_uid, last_login_at, created_at FROM customers ORDER BY created_at DESC').all();
 }
 
 export function getCustomerProfile(email) {

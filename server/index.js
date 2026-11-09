@@ -28,7 +28,8 @@ import {
   getCustomerCart,
   addToCustomerCart,
   removeFromCustomerCart,
-  clearCustomerCart
+  clearCustomerCart,
+  getAllCustomers
 } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -158,10 +159,10 @@ app.put('/api/admin/credentials', (req, res) => {
   }
 });
 
-// Customer Authentication & Profile Routes (Google Login)
+// Customer Authentication & Profile Routes (Google Login & Firebase Database)
 app.post('/api/customer/google-auth', (req, res) => {
   try {
-    const { email, name, avatar, phone, address, google_id } = req.body;
+    const { email, name, avatar, phone, address, google_id, firebase_uid, auth_provider } = req.body;
     if (!email) {
       return res.status(400).json({ error: 'Google account email is required.' });
     }
@@ -172,10 +173,21 @@ app.post('/api/customer/google-auth', (req, res) => {
       avatar: avatar || '',
       phone: phone || '',
       address: address || '',
-      google_id: google_id || ''
+      google_id: google_id || '',
+      firebase_uid: firebase_uid || '',
+      auth_provider: auth_provider || 'firebase_google'
     });
 
     res.json({ success: true, customer });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/customers', (req, res) => {
+  try {
+    const customers = getAllCustomers();
+    res.json(customers);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

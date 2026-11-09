@@ -298,6 +298,29 @@ export async function adminGetList() {
 // CUSTOMER GOOGLE AUTHENTICATION & PROFILE
 // -------------------------------------------------------------
 
+const CUSTOMERS_DIRECTORY_KEY = 'thriftzy_customers_database_v3';
+
+export function getLocalCustomers() {
+  try {
+    const raw = localStorage.getItem(CUSTOMERS_DIRECTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export function saveLocalCustomerRecord(cust) {
+  if (!cust || !cust.email) return;
+  try {
+    const list = getLocalCustomers();
+    const updated = [
+      cust,
+      ...list.filter((c) => c.email?.toLowerCase() !== cust.email?.toLowerCase())
+    ];
+    localStorage.setItem(CUSTOMERS_DIRECTORY_KEY, JSON.stringify(updated));
+  } catch (e) {}
+}
+
 export function getCustomerProfile() {
   try {
     const raw = localStorage.getItem(CUSTOMER_SESSION_KEY);
@@ -310,6 +333,7 @@ export function getCustomerProfile() {
 export function saveCustomerProfile(profile) {
   try {
     localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(profile));
+    saveLocalCustomerRecord(profile);
   } catch (e) {}
 }
 
@@ -319,7 +343,7 @@ export function customerLogout() {
   } catch (e) {}
 }
 
-export async function customerGoogleLogin({ email, name, avatar, phone, address, google_id }) {
+export async function customerGoogleLogin({ email, name, avatar, phone, address, google_id, firebase_uid, auth_provider }) {
   const cleanEmail = (email || '').trim().toLowerCase();
   if (!cleanEmail) throw new Error('Email is required for Google Sign-in.');
 
@@ -328,13 +352,16 @@ export async function customerGoogleLogin({ email, name, avatar, phone, address,
 
   const customerData = {
     id: (isSame && existing?.id) ? existing.id : 'cust_' + Date.now().toString(36),
+    firebase_uid: firebase_uid || (isSame ? existing?.firebase_uid : '') || '',
     google_id: google_id || (isSame ? existing?.google_id : '') || 'goog_' + Date.now().toString(36),
     email: cleanEmail,
     name: name || (isSame ? existing?.name : '') || cleanEmail.split('@')[0],
     avatar: avatar || (isSame ? existing?.avatar : '') || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name || cleanEmail)}`,
     phone: phone || (isSame ? existing?.phone : '') || '',
     address: address || (isSame ? existing?.address : '') || '',
-    created_at: (isSame && existing?.created_at) ? existing.created_at : new Date().toISOString()
+    auth_provider: auth_provider || (isSame ? existing?.auth_provider : '') || 'firebase_google',
+    created_at: (isSame && existing?.created_at) ? existing.created_at : new Date().toISOString(),
+    last_login_at: new Date().toISOString()
   };
 
   try {
@@ -355,6 +382,17 @@ export async function customerGoogleLogin({ email, name, avatar, phone, address,
   // Fallback to client persistent storage
   saveCustomerProfile(customerData);
   return customerData;
+}
+
+export async function fetchAllCustomers() {
+  try {
+    const res = await fetch(`${API_BASE}/admin/customers`);
+    if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
+      const data = await res.json();
+      if (Array.isArray(data)) return data;
+    }
+  } catch (e) {}
+  return getLocalCustomers();
 }
 
 export async function updateCustomerProfile(updates) {
