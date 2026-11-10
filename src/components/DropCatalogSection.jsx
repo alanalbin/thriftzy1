@@ -67,14 +67,6 @@ export default function DropCatalogSection({
           {/* Action buttons & Sort Selector */}
           <div className="flex flex-wrap items-center gap-3">
             <button
-              onClick={onOpenAddModal}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-red-600 text-white text-xs font-bold shadow-md shadow-red-500/20 hover:bg-red-700 transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add to Database</span>
-            </button>
-
-            <button
               onClick={onOpenDbModal}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-neutral-200 text-neutral-700 text-xs font-bold shadow-sm hover:border-red-400 hover:text-red-600 transition-colors"
             >

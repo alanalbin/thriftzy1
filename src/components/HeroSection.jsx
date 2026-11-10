@@ -107,15 +107,48 @@ export default function HeroSection({
                 <ArrowRight className="w-4 h-4" />
               </a>
 
-              <motion.button
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
-                onClick={onOpenCustomerProfile}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-4 rounded-full bg-white border border-neutral-200 text-neutral-900 font-bold text-xs shadow-sm hover:border-red-400 hover:text-red-600 transition-all"
-              >
-                <User className="w-4 h-4 text-red-600" />
-                <span>{customer ? `Hi, ${customer.name}` : 'Customer Profile / Sign In'}</span>
-              </motion.button>
+              {customer ? (
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={onOpenCustomerProfile}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-6 py-4 rounded-full bg-white border border-neutral-200 text-neutral-900 font-bold text-xs shadow-sm hover:border-red-400 hover:text-red-600 transition-all"
+                >
+                  <img
+                    src={customer.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${customer.name}`}
+                    alt={customer.name}
+                    className="w-5 h-5 rounded-full object-cover border border-neutral-200"
+                  />
+                  <span>Hi, {customer.name}</span>
+                </motion.button>
+              ) : (
+                <motion.button
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={onOpenCustomerProfile}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-6 py-4 rounded-full bg-white border-2 border-neutral-200 hover:border-blue-500 hover:bg-neutral-50 text-neutral-900 font-extrabold text-xs shadow-sm hover:shadow-md transition-all"
+                >
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17Z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24Z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.28 14.27a7.22 7.22 0 0 1 0-4.54V6.58H1.25a12.01 12.01 0 0 0 0 10.84l4.03-3.15Z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98Z"
+                    />
+                  </svg>
+                  <span>Sign in with Google</span>
+                </motion.button>
+              )}
             </motion.div>
 
             {/* Trust Metrics */}

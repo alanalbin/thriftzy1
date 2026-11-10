@@ -110,16 +110,6 @@ export default function HeroSparkCanvas({
                 <Flame className="w-4 h-4" />
                 <span>Join VIP Drop Priority</span>
               </motion.button>
-
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={onOpenAddModal}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white border border-neutral-200 text-neutral-800 font-bold text-xs shadow-sm hover:border-red-400 hover:text-red-600 transition-all"
-              >
-                <Plus className="w-3.5 h-3.5 text-red-600" />
-                <span>+ Add Grail to DB</span>
-              </motion.button>
             </div>
           </div>
         </div>

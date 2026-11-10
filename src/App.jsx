@@ -240,6 +240,7 @@ export default function App() {
           onDeleteItem={handleDeleteCloth}
           onOpenQuickView={(item) => setQuickViewItem(item)}
           onDatabaseReload={handleDatabaseReload}
+          onOpenAddModal={() => setIsAddClothOpen(true)}
         />
       ) : (
         /* =========================================================================
@@ -277,6 +278,8 @@ export default function App() {
               onResetFavoritesFilter={() => setShowFavoritesOnly(false)}
               onOpenQuickView={(item) => setQuickViewItem(item)}
               onAddToCart={handleAddToCart}
+              customer={customer}
+              onOpenCustomerProfile={() => setIsCustomerModalOpen(true)}
             />
 
             {/* How It Works */}

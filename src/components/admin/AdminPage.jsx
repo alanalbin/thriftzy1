@@ -53,7 +53,8 @@ export default function AdminPage({
   onClothUpdated,
   onDeleteItem,
   onOpenQuickView,
-  onDatabaseReload
+  onDatabaseReload,
+  onOpenAddModal
 }) {
   // Login state
   const [authEmail, setAuthEmail] = useState('');
@@ -408,6 +409,23 @@ export default function AdminPage({
 
             {/* Right actions */}
             <div className="flex items-center gap-3">
+              {admin && (
+                <button
+                  onClick={() => {
+                    if (onOpenAddModal) {
+                      onOpenAddModal();
+                    } else {
+                      setIsAddFormOpen(true);
+                      document.getElementById('admin-add-cloth-studio')?.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-md shadow-red-500/25"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ Add New Cloth</span>
+                </button>
+              )}
+
               <button
                 onClick={onNavigateHome}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-neutral-200 bg-white text-neutral-700 hover:text-red-600 hover:border-red-400 text-xs font-bold transition-all shadow-sm"
@@ -598,7 +616,7 @@ export default function AdminPage({
             </div>
 
             {/* Row 2: FIRST PAGE PRODUCT ADD STUDIO */}
-            <div className="rounded-[32px] bg-white p-6 sm:p-8 border border-red-500/20 shadow-xl outcrowd-shadow">
+            <div id="admin-add-cloth-studio" className="rounded-[32px] bg-white p-6 sm:p-8 border border-red-500/20 shadow-xl outcrowd-shadow">
               <div className="flex items-center justify-between pb-4 border-b border-neutral-100">
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-100 text-red-600 shadow-sm">
@@ -923,8 +941,23 @@ export default function AdminPage({
                   </p>
                 </div>
 
-                {/* Search & Filter */}
-                <div className="flex items-center gap-2">
+                {/* Search & Filter & Add */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (onOpenAddModal) {
+                        onOpenAddModal();
+                      } else {
+                        setIsAddFormOpen(true);
+                        document.getElementById('admin-add-cloth-studio')?.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-sm"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Add Cloth</span>
+                  </button>
+
                   <div className="relative w-48 sm:w-64">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                     <input
