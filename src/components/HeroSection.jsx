@@ -124,7 +124,7 @@ export default function HeroSection({
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" /> 100% Genuine Vintage
               </span>
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Instant WhatsApp Checkout
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Razorpay & UPI Secure Checkout
               </span>
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Free Shipping Over ₹999

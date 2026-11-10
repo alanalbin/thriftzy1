@@ -215,10 +215,21 @@ app.put('/api/customer/profile', (req, res) => {
   }
 });
 
-// Orders Routes
+// Orders Routes with Razorpay Payment Support
 app.post('/api/orders', (req, res) => {
   try {
-    const { customerEmail, customerName, customerPhone, deliveryAddress, items, totalAmount } = req.body;
+    const {
+      customerEmail,
+      customerName,
+      customerPhone,
+      deliveryAddress,
+      items,
+      totalAmount,
+      razorpayPaymentId,
+      razorpayOrderId,
+      paymentMethod,
+      paymentStatus
+    } = req.body;
     if (!customerEmail || !items || !items.length) {
       return res.status(400).json({ error: 'Customer email and items are required to place an order.' });
     }
@@ -229,7 +240,11 @@ app.post('/api/orders', (req, res) => {
       customerPhone,
       deliveryAddress,
       items,
-      totalAmount
+      totalAmount,
+      razorpayPaymentId,
+      razorpayOrderId,
+      paymentMethod: paymentMethod || 'Razorpay',
+      paymentStatus: paymentStatus || 'PAID'
     });
 
     res.status(201).json({ success: true, order });

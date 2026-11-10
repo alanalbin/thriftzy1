@@ -16,7 +16,12 @@ import {
   ShieldCheck,
   CheckCircle2,
   Lock,
-  Flame
+  Flame,
+  Key,
+  Settings,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import {
@@ -29,7 +34,9 @@ import {
 import {
   signInWithFirebaseGoogle,
   firebaseSignOut,
-  isFirebaseConfigured
+  isFirebaseConfigured,
+  getFirebaseConfig,
+  saveFirebaseConfig
 } from '../../services/firebase';
 
 export default function CustomerProfileModal({
@@ -41,14 +48,19 @@ export default function CustomerProfileModal({
   onCartUpdated
 }) {
   const [tab, setTab] = useState('profile'); // 'profile' | 'orders'
-  const [customEmail, setCustomEmail] = useState('');
-  const [customName, setCustomName] = useState('');
-  const [isEnteringCustomEmail, setIsEnteringCustomEmail] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [justLoggedIn, setJustLoggedIn] = useState(false);
+
+  // Firebase Configuration state
+  const [showConfigHelper, setShowConfigHelper] = useState(false);
+  const [fbApiKey, setFbApiKey] = useState('');
+  const [fbAuthDomain, setFbAuthDomain] = useState('');
+  const [fbProjectId, setFbProjectId] = useState('');
+  const [fbAppId, setFbAppId] = useState('');
+  const [configSuccess, setConfigSuccess] = useState(false);
 
   // Edit profile state
   const [name, setName] = useState('');
@@ -62,6 +74,15 @@ export default function CustomerProfileModal({
   // Orders state
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+
+  // Initialize config fields
+  useEffect(() => {
+    const cfg = getFirebaseConfig();
+    setFbApiKey(cfg.apiKey || '');
+    setFbAuthDomain(cfg.authDomain || '');
+    setFbProjectId(cfg.projectId || '');
+    setFbAppId(cfg.appId || '');
+  }, [isOpen]);
 
   // Initialize profile fields when customer changes
   useEffect(() => {
@@ -86,60 +107,57 @@ export default function CustomerProfileModal({
     }
   }, [customer]);
 
-  // Initialize official Google Identity Services (GSI) if available in window
+  // Initialize official Google Identity Services (GSI) if client ID exists
   useEffect(() => {
     if (!customer && isOpen && typeof window !== 'undefined' && window.google?.accounts?.id) {
-      try {
-        const clientId =
-          import.meta.env.VITE_GOOGLE_CLIENT_ID ||
-          '1084226305417-thriftzy.apps.googleusercontent.com';
-
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: (response) => {
-            if (response?.credential) {
-              try {
-                const base64Url = response.credential.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(
-                  atob(base64)
-                    .split('')
-                    .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-                    .join('')
-                );
-                const payload = JSON.parse(jsonPayload);
-                if (payload?.email) {
-                  performGoogleLogin(
-                    payload.email,
-                    payload.name || payload.given_name,
-                    payload.picture,
-                    payload.sub,
-                    `fb_gsi_${payload.sub}`,
-                    'google_gsi'
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      if (clientId && !clientId.includes('your_google')) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: (response) => {
+              if (response?.credential) {
+                try {
+                  const base64Url = response.credential.split('.')[1];
+                  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                  const jsonPayload = decodeURIComponent(
+                    atob(base64)
+                      .split('')
+                      .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                      .join('')
                   );
+                  const payload = JSON.parse(jsonPayload);
+                  if (payload?.email) {
+                    performGoogleLogin(
+                      payload.email,
+                      payload.name || payload.given_name,
+                      payload.picture,
+                      payload.sub,
+                      `fb_gsi_${payload.sub}`,
+                      'google_gsi'
+                    );
+                  }
+                } catch (e) {
+                  console.warn('Google credential decode error:', e);
                 }
-              } catch (e) {
-                console.warn('Google credential decode error:', e);
               }
-            }
-          },
-          auto_select: false,
-          cancel_on_tap_outside: true
-        });
-
-        const btnContainer = document.getElementById('gsi-official-button-container');
-        if (btnContainer) {
-          window.google.accounts.id.renderButton(btnContainer, {
-            type: 'standard',
-            theme: 'outline',
-            size: 'large',
-            text: 'continue_with',
-            shape: 'pill',
-            width: 320
+            },
+            auto_select: false,
+            cancel_on_tap_outside: true
           });
-        }
-      } catch (err) {
-        // Silently continue if origin not configured in GCP
+
+          const btnContainer = document.getElementById('gsi-official-button-container');
+          if (btnContainer) {
+            window.google.accounts.id.renderButton(btnContainer, {
+              type: 'standard',
+              theme: 'outline',
+              size: 'large',
+              text: 'continue_with',
+              shape: 'pill',
+              width: 320
+            });
+          }
+        } catch (err) {}
       }
     }
   }, [customer, isOpen]);
@@ -159,7 +177,7 @@ export default function CustomerProfileModal({
 
   if (!isOpen) return null;
 
-  // Execute Google Login & Database Storage
+  // Execute Real Google Login & Database Storage
   const performGoogleLogin = async (
     emailToUse,
     nameToUse,
@@ -175,7 +193,7 @@ export default function CustomerProfileModal({
     try {
       const cleanEmail = (emailToUse || '').trim().toLowerCase();
       if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
-        throw new Error('Please provide a valid Gmail address (e.g. yourname@gmail.com).');
+        throw new Error('Authenticated Google account does not contain a valid email address.');
       }
 
       const cleanName = (nameToUse || cleanEmail.split('@')[0])
@@ -186,7 +204,7 @@ export default function CustomerProfileModal({
         avatarToUse ||
         `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cleanName)}`;
 
-      setLoadingMessage('Saving customer data in database...');
+      setLoadingMessage('Saving customer profile in database...');
 
       const newCustomer = await customerGoogleLogin({
         email: cleanEmail,
@@ -218,9 +236,6 @@ export default function CustomerProfileModal({
       onCustomerChange(newCustomer);
       setJustLoggedIn(true);
       setTab('profile');
-      setCustomEmail('');
-      setCustomName('');
-      setIsEnteringCustomEmail(false);
     } catch (err) {
       setError(err.message || 'Google sign-in failed. Please try again.');
     } finally {
@@ -229,15 +244,15 @@ export default function CustomerProfileModal({
     }
   };
 
-  // Primary Google Sign-In button handler (Firebase Auth Powered)
+  // Primary Real Google Sign-In Handler (Firebase Auth Popup)
   const handlePrimaryGoogleClick = async () => {
     setError('');
     setLoading(true);
-    setLoadingMessage('Connecting via Firebase Google Auth...');
+    setLoadingMessage('Opening Google Sign-in popup...');
 
     try {
-      // 1. Trigger Firebase Google Sign-In Popup
       const fbResult = await signInWithFirebaseGoogle();
+
       if (fbResult.success && fbResult.user) {
         await performGoogleLogin(
           fbResult.user.email,
@@ -250,60 +265,82 @@ export default function CustomerProfileModal({
         return;
       }
 
-      // If user closed the popup, stop
-      if (fbResult.errorCode === 'auth/popup-closed-by-user') {
+      // User closed the popup window
+      if (fbResult.cancelled) {
         setLoading(false);
         setLoadingMessage('');
         return;
       }
 
-      // 2. Fallback to Google Identity prompt or fast 1-click account
-      if (typeof window !== 'undefined' && window.google?.accounts?.id) {
-        window.google.accounts.id.prompt();
+      // Missing or invalid Firebase API Key
+      if (fbResult.needsConfig) {
+        setShowConfigHelper(true);
+        setError('Real Google authentication requires valid Firebase Web App credentials. Please paste your Firebase config below.');
+        setLoading(false);
+        setLoadingMessage('');
+        return;
       }
 
-      // 3. Fallback to 1-click Google account
-      await performGoogleLogin(
-        'albineditz1@gmail.com',
-        'Albin Joseph',
-        null,
-        'goog_albin_master',
-        'fb_albin_master',
-        'firebase_google'
-      );
+      // Unauthorized domain
+      if (fbResult.unauthorizedDomain) {
+        setError(fbResult.errorMessage);
+        setLoading(false);
+        setLoadingMessage('');
+        return;
+      }
+
+      setError(fbResult.errorMessage || 'Google authentication failed.');
     } catch (err) {
-      console.warn('Firebase Google Auth notice:', err);
-      // Fallback
-      await performGoogleLogin('albineditz1@gmail.com', 'Albin Joseph');
+      console.warn('Google Sign-in error:', err);
+      setError(err.message || 'Could not authenticate with Google.');
     } finally {
       setLoading(false);
       setLoadingMessage('');
     }
   };
 
-  const handleCustomGoogleSubmit = (e) => {
+  // Save custom Firebase credentials
+  const handleSaveFirebaseConfig = (e) => {
     e.preventDefault();
-    const clean = (customEmail || '').trim().toLowerCase();
-    if (!clean || !clean.includes('@') || !clean.includes('.')) {
-      setError('Please enter a valid Gmail address (e.g. name@gmail.com).');
+    if (!fbApiKey || fbApiKey.trim().length < 20) {
+      setError('Please provide a valid Firebase API Key (e.g. AIzaSy...).');
       return;
     }
-    performGoogleLogin(
-      clean,
-      customName.trim() || clean.split('@')[0],
-      null,
-      'goog_' + Date.now().toString(36),
-      'fb_' + Date.now().toString(36),
-      'firebase_google'
-    );
+
+    const cfg = {
+      apiKey: fbApiKey.trim(),
+      authDomain: fbAuthDomain.trim() || 'thriftzy-store.firebaseapp.com',
+      projectId: fbProjectId.trim() || 'thriftzy-store',
+      storageBucket: `${fbProjectId.trim() || 'thriftzy-store'}.appspot.com`,
+      messagingSenderId: '1084226305417',
+      appId: fbAppId.trim() || '1:1084226305417:web:8c5b96f13e7d'
+    };
+
+    saveFirebaseConfig(cfg);
+    setConfigSuccess(true);
+    setError('');
+    setTimeout(() => {
+      setConfigSuccess(false);
+      setShowConfigHelper(false);
+      handlePrimaryGoogleClick();
+    }, 1000);
   };
 
-  // Handle Profile Update
+  // Handle Profile Update (Customer details entering)
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     setSaveSuccess(false);
 
+    if (!phone || phone.trim().length < 8) {
+      alert('Please enter a valid mobile number for delivery.');
+      return;
+    }
+
     const fullAddress = [flat, street, city, state, pincode].filter(Boolean).join(', ');
+    if (!fullAddress || fullAddress.length < 5) {
+      alert('Please enter a complete delivery address (House/Flat, Street, City, State, PIN).');
+      return;
+    }
 
     try {
       const updated = await updateCustomerProfile({
@@ -378,29 +415,32 @@ export default function CustomerProfileModal({
           }}
           transition={{
             type: 'spring',
-            stiffness: 260,
-            damping: 24
+            damping: 24,
+            stiffness: 220
           }}
-          className="relative w-full max-w-xl rounded-[32px] bg-white p-6 sm:p-8 shadow-2xl border border-neutral-100 z-10 max-h-[92vh] overflow-y-auto"
+          style={{ transformStyle: 'preserve-3d' }}
+          className="relative w-full max-w-lg rounded-[32px] bg-white border border-neutral-200/90 shadow-2xl p-6 sm:p-8 overflow-hidden z-10 my-auto"
         >
-          {/* Close button */}
+          {/* Subtle Accent Glow */}
+          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-56 h-56 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-56 h-56 rounded-full bg-red-500/10 blur-3xl pointer-events-none" />
+
+          {/* Close Button */}
           <button
             onClick={onClose}
-            className="absolute top-5 right-5 p-2 rounded-full text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors"
+            className="absolute top-5 right-5 p-2 rounded-2xl text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors z-20"
           >
             <X className="w-5 h-5" />
           </button>
 
           {!customer ? (
             /* =======================================================
-               VIEW 1: AUTHENTIC FIREBASE & GOOGLE SIGN-IN EXPERIENCE
+               VIEW 1: AUTHENTICATE WITH REAL GOOGLE ACCOUNTS (FIREBASE)
                ======================================================= */
-            <div className="space-y-6">
-              {/* Header */}
-              <div className="text-center space-y-2">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white border border-neutral-200 shadow-md">
-                  {/* Google G Logo */}
-                  <svg className="w-9 h-9" viewBox="0 0 24 24">
+            <div className="space-y-5">
+              <div className="text-center space-y-2 pt-2">
+                <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-neutral-50 border border-neutral-200 shadow-sm mx-auto">
+                  <svg className="w-7 h-7" viewBox="0 0 24 24">
                     <path
                       fill="#4285F4"
                       d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17Z"
@@ -421,14 +461,14 @@ export default function CustomerProfileModal({
                 </div>
                 <div className="flex items-center justify-center gap-1.5 pt-1">
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold">
-                    <Flame className="w-3 h-3 text-amber-600 fill-amber-500" /> Firebase Auth Ready
+                    <Flame className="w-3 h-3 text-amber-600 fill-amber-500" /> Firebase Real Google Auth
                   </span>
                 </div>
                 <h3 className="text-2xl font-black text-neutral-900 tracking-tight">
                   Sign in with Google
                 </h3>
                 <p className="text-xs text-neutral-500 max-w-sm mx-auto">
-                  Sign in through Firebase Google Auth to save your customer profile, sync your cart, and place orders directly.
+                  Authenticate securely using your real Google Account to enter delivery details, sync your bag, and checkout with Razorpay.
                 </p>
               </div>
 
@@ -437,17 +477,17 @@ export default function CustomerProfileModal({
                 <motion.div
                   initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2.5"
+                  className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2.5"
                 >
-                  <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
-                  <span>{error}</span>
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                  <span className="leading-relaxed">{error}</span>
                 </motion.div>
               )}
 
               {/* Official Google GSI Button Container (Rendered by Google Script if available) */}
               <div id="gsi-official-button-container" className="flex justify-center w-full empty:hidden" />
 
-              {/* Primary Sign In Button (Firebase Powered) */}
+              {/* Primary Real Google Sign-in Button */}
               <div className="space-y-3">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -476,113 +516,95 @@ export default function CustomerProfileModal({
                     />
                   </svg>
                   <span className="text-sm font-extrabold text-neutral-900">
-                    {loading ? (loadingMessage || 'Authenticating with Firebase Google...') : 'Sign in with Google (Firebase)'}
+                    {loading ? (loadingMessage || 'Authenticating with Google...') : 'Sign in with Google (Firebase)'}
                   </span>
                 </motion.button>
               </div>
 
-              {/* Fast Account Selection */}
-              <div className="space-y-2.5 pt-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block text-center">
-                  Select Google Account to Store in Database
-                </span>
-
-                {/* Account 1: Albin (Store Admin / Customer) */}
-                <motion.button
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
+              {/* Firebase Credentials Configuration Drawer */}
+              <div className="pt-2 border-t border-neutral-100">
+                <button
                   type="button"
-                  disabled={loading}
-                  onClick={() =>
-                    performGoogleLogin(
-                      'albineditz1@gmail.com',
-                      'Albin Joseph',
-                      null,
-                      'goog_albin_master',
-                      'fb_albin_master',
-                      'firebase_google'
-                    )
-                  }
-                  className="w-full flex items-center justify-between p-3 rounded-2xl border border-neutral-200 bg-neutral-50 hover:bg-neutral-100 hover:border-blue-400 transition-all text-left group"
+                  onClick={() => setShowConfigHelper(!showConfigHelper)}
+                  className="w-full flex items-center justify-between py-2 text-xs font-bold text-neutral-500 hover:text-neutral-900 transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <img
-                      src="https://api.dicebear.com/7.x/initials/svg?seed=Albin%20Joseph"
-                      alt="Albin"
-                      className="w-9 h-9 rounded-full object-cover border border-neutral-300 shadow-sm"
-                    />
-                    <div>
-                      <span className="text-xs font-bold text-neutral-900 block group-hover:text-blue-600 transition-colors">
-                        Albin Joseph (Owner / Customer)
-                      </span>
-                      <span className="text-[11px] text-neutral-500 font-medium block">
-                        albineditz1@gmail.com
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-xs font-bold text-blue-600 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                    <span>Continue</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                  <span className="flex items-center gap-1.5">
+                    <Key className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Firebase Credentials Configuration</span>
                   </span>
-                </motion.button>
+                  {showConfigHelper ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
 
-                {/* Account 2: Custom Google Account Toggle */}
-                {!isEnteringCustomEmail ? (
-                  <button
-                    type="button"
-                    onClick={() => setIsEnteringCustomEmail(true)}
-                    className="w-full py-2.5 text-center text-xs font-bold text-neutral-600 hover:text-neutral-900 transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    <span>+ Use another Google account</span>
-                  </button>
-                ) : (
+                {showConfigHelper && (
                   <motion.form
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    onSubmit={handleCustomGoogleSubmit}
-                    className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200 space-y-3"
+                    onSubmit={handleSaveFirebaseConfig}
+                    className="mt-2.5 p-4 rounded-2xl bg-neutral-50 border border-neutral-200 space-y-3 text-xs"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-neutral-700">Enter Your Gmail</span>
-                      <button
-                        type="button"
-                        onClick={() => setIsEnteringCustomEmail(false)}
-                        className="text-[10px] font-bold text-neutral-400 hover:text-neutral-700"
-                      >
-                        Cancel
-                      </button>
+                    <div className="space-y-1">
+                      <p className="font-semibold text-neutral-700">
+                        Paste your Web App credentials from Firebase Console:
+                      </p>
+                      <p className="text-[11px] text-neutral-500">
+                        Firebase Console &gt; Project Settings &gt; General &gt; Your apps &gt; Web app.
+                      </p>
                     </div>
 
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
-                      <input
-                        type="email"
-                        required
-                        value={customEmail}
-                        onChange={(e) => setCustomEmail(e.target.value)}
-                        placeholder="yourname@gmail.com"
-                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-neutral-200 text-xs font-semibold text-neutral-900 focus:border-blue-500 outline-none"
-                      />
-                    </div>
+                    {configSuccess && (
+                      <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Saved! Re-initiating real Google Authentication...</span>
+                      </div>
+                    )}
 
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">
+                        Firebase API Key (apiKey) *
+                      </label>
                       <input
                         type="text"
-                        value={customName}
-                        onChange={(e) => setCustomName(e.target.value)}
-                        placeholder="Your Name (Optional)"
-                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-neutral-200 text-xs font-semibold text-neutral-900 focus:border-blue-500 outline-none"
+                        required
+                        value={fbApiKey}
+                        onChange={(e) => setFbApiKey(e.target.value)}
+                        placeholder="AIzaSy..."
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 font-mono text-xs outline-none focus:border-blue-500"
                       />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">
+                          Auth Domain
+                        </label>
+                        <input
+                          type="text"
+                          value={fbAuthDomain}
+                          onChange={(e) => setFbAuthDomain(e.target.value)}
+                          placeholder="your-app.firebaseapp.com"
+                          className="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-xs outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-neutral-500 mb-1">
+                          Project ID
+                        </label>
+                        <input
+                          type="text"
+                          value={fbProjectId}
+                          onChange={(e) => setFbProjectId(e.target.value)}
+                          placeholder="your-project-id"
+                          className="w-full px-3 py-2 rounded-xl bg-white border border-neutral-200 text-xs outline-none focus:border-blue-500"
+                        />
+                      </div>
                     </div>
 
                     <button
                       type="submit"
-                      disabled={loading}
-                      className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5"
+                      className="w-full py-2.5 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-white font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-1.5"
                     >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Authenticate & Save to Database</span>
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Save Credentials & Launch Google Sign-In</span>
                     </button>
                   </motion.form>
                 )}
@@ -591,7 +613,7 @@ export default function CustomerProfileModal({
               {/* Security & Database Notice */}
               <div className="pt-2 border-t border-neutral-100 flex items-center justify-center gap-2 text-[11px] text-neutral-400">
                 <Lock className="w-3 h-3 text-neutral-400" />
-                <span>Encrypted Firebase OAuth 2.0 & SQLite Customer Database</span>
+                <span>Real Google OAuth 2.0 & SQLite Customer Database</span>
               </div>
             </div>
           ) : (
@@ -611,8 +633,8 @@ export default function CustomerProfileModal({
                       ✓
                     </div>
                     <div>
-                      <span className="font-extrabold text-neutral-950 block">Signed In via Firebase!</span>
-                      <span className="text-[11px] text-neutral-600">Your profile and cart database are active. Complete delivery address below.</span>
+                      <span className="font-extrabold text-neutral-950 block">Google Account Authenticated!</span>
+                      <span className="text-[11px] text-neutral-600">Please complete your delivery address below to enable Razorpay checkout.</span>
                     </div>
                   </div>
                   <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
@@ -631,7 +653,7 @@ export default function CustomerProfileModal({
                     <div className="flex items-center gap-1.5">
                       <h3 className="text-base font-extrabold text-neutral-900">{customer.name}</h3>
                       <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                        <Check className="w-3 h-3 text-blue-600" /> Firebase & Google Verified
+                        <Check className="w-3 h-3 text-blue-600" /> Google Verified
                       </span>
                     </div>
                     <p className="text-xs text-neutral-500 font-medium">{customer.email}</p>
@@ -688,7 +710,7 @@ export default function CustomerProfileModal({
                       className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2"
                     >
                       <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>Details saved in database! You are ready for 1-click checkout.</span>
+                      <span>Details saved in database! You are ready to checkout with Razorpay.</span>
                     </motion.div>
                   )}
 
@@ -712,7 +734,7 @@ export default function CustomerProfileModal({
 
                     <div>
                       <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-700 mb-1">
-                        Mobile Number (for delivery) *
+                        Mobile Number (for delivery & OTP) *
                       </label>
                       <div className="relative">
                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
@@ -817,7 +839,7 @@ export default function CustomerProfileModal({
                     className="w-full py-3.5 rounded-2xl bg-neutral-950 hover:bg-red-600 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 group"
                   >
                     <Check className="w-4 h-4 text-emerald-400 group-hover:text-white" />
-                    <span>Save Delivery Details & Continue Shopping</span>
+                    <span>Save Delivery Details & Ready for Razorpay Checkout</span>
                   </button>
                 </form>
               ) : (
@@ -834,7 +856,7 @@ export default function CustomerProfileModal({
                       </div>
                       <h4 className="text-sm font-bold text-neutral-800">No orders placed yet</h4>
                       <p className="text-xs text-neutral-500 max-w-xs mx-auto">
-                        Your completed orders will appear here. Add your favorite streetwear pieces to your cart and place an order!
+                        Your completed orders will appear here. Add your favorite streetwear pieces to your cart and proceed to Razorpay checkout!
                       </p>
                       <button
                         onClick={() => {
@@ -858,16 +880,23 @@ export default function CustomerProfileModal({
                             Order #{order.id}
                           </span>
                           <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                            {order.status || 'Confirmed'}
+                            {order.status || 'Confirmed (Paid)'}
                           </span>
                         </div>
 
-                        <div className="text-[11px] text-neutral-500">
-                          Placed on: {new Date(order.created_at || Date.now()).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric'
-                          })}
+                        <div className="text-[11px] text-neutral-500 flex items-center justify-between">
+                          <span>
+                            {new Date(order.created_at || Date.now()).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </span>
+                          {order.razorpay_payment_id && (
+                            <span className="font-mono text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-200">
+                              Razorpay: {order.razorpay_payment_id}
+                            </span>
+                          )}
                         </div>
 
                         {/* Order Items */}

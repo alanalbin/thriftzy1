@@ -98,6 +98,12 @@ try { db.exec(`ALTER TABLE customers ADD COLUMN auth_provider TEXT DEFAULT 'goog
 try { db.exec(`ALTER TABLE customers ADD COLUMN last_login_at DATETIME;`); } catch (e) {}
 try { db.exec(`ALTER TABLE customers ADD COLUMN updated_at DATETIME;`); } catch (e) {}
 
+// Ensure orders schema has Razorpay payment tracking columns
+try { db.exec(`ALTER TABLE orders ADD COLUMN razorpay_payment_id TEXT;`); } catch (e) {}
+try { db.exec(`ALTER TABLE orders ADD COLUMN razorpay_order_id TEXT;`); } catch (e) {}
+try { db.exec(`ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT 'Razorpay';`); } catch (e) {}
+try { db.exec(`ALTER TABLE orders ADD COLUMN payment_status TEXT DEFAULT 'PAID';`); } catch (e) {}
+
 console.log('[SQLite DB] Initialized database with customers, orders, and dynamic admin schema.');
 
 // Password Hashing & Verification using Node PBKDF2
@@ -411,15 +417,30 @@ export function getCustomerProfile(email) {
   return db.prepare('SELECT * FROM customers WHERE LOWER(email) = ?').get(email.toLowerCase().trim());
 }
 
-// Customer Orders Management
-export function createOrder({ customerEmail, customerName, customerPhone, deliveryAddress, items, totalAmount }) {
+// Customer Orders Management with Razorpay Payment Support
+export function createOrder({
+  customerEmail,
+  customerName,
+  customerPhone,
+  deliveryAddress,
+  items,
+  totalAmount,
+  razorpayPaymentId = null,
+  razorpayOrderId = null,
+  paymentMethod = 'Razorpay',
+  paymentStatus = 'PAID'
+}) {
   if (!customerEmail) throw new Error('Customer email is required.');
   const id = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
   const itemsJson = typeof items === 'string' ? items : JSON.stringify(items || []);
 
   db.prepare(`
-    INSERT INTO orders (id, customer_email, customer_name, customer_phone, delivery_address, items, total_amount, currency, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'INR', 'Confirmed')
+    INSERT INTO orders (
+      id, customer_email, customer_name, customer_phone, delivery_address,
+      items, total_amount, currency, status,
+      razorpay_payment_id, razorpay_order_id, payment_method, payment_status
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'INR', ?, ?, ?, ?, ?)
   `).run(
     id,
     customerEmail.toLowerCase().trim(),
@@ -427,7 +448,12 @@ export function createOrder({ customerEmail, customerName, customerPhone, delive
     customerPhone || '',
     deliveryAddress || '',
     itemsJson,
-    Number(totalAmount) || 0
+    Number(totalAmount) || 0,
+    paymentStatus === 'PAID' ? 'Confirmed (Paid)' : 'Confirmed',
+    razorpayPaymentId || null,
+    razorpayOrderId || null,
+    paymentMethod || 'Razorpay',
+    paymentStatus || 'PAID'
   );
 
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(id);

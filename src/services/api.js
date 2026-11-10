@@ -546,7 +546,11 @@ export async function createCustomerOrder(orderData) {
     items: orderData.items || [],
     totalAmount: Number(orderData.totalAmount) || 0,
     currency: 'INR',
-    status: 'Confirmed',
+    status: orderData.paymentStatus === 'PAID' ? 'Confirmed (Paid)' : (orderData.status || 'Confirmed'),
+    razorpay_payment_id: orderData.razorpayPaymentId || orderData.razorpay_payment_id || null,
+    razorpay_order_id: orderData.razorpayOrderId || orderData.razorpay_order_id || null,
+    payment_method: orderData.paymentMethod || orderData.payment_method || 'Razorpay',
+    payment_status: orderData.paymentStatus || orderData.payment_status || 'PAID',
     created_at: new Date().toISOString()
   };
 
@@ -554,7 +558,13 @@ export async function createCustomerOrder(orderData) {
     const res = await fetch(`${API_BASE}/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newOrder)
+      body: JSON.stringify({
+        ...newOrder,
+        razorpayPaymentId: newOrder.razorpay_payment_id,
+        razorpayOrderId: newOrder.razorpay_order_id,
+        paymentMethod: newOrder.payment_method,
+        paymentStatus: newOrder.payment_status
+      })
     });
     if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
       const data = await res.json();

@@ -1224,9 +1224,20 @@ export default function AdminPage({
                         >
                           <div className="flex items-center justify-between">
                             <span className="font-mono font-bold text-neutral-950">#{order.id}</span>
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                              {order.status || 'Confirmed'}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              {order.razorpay_payment_id ? (
+                                <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold">
+                                  Razorpay: {order.razorpay_payment_id.slice(0, 14)}...
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-[10px] font-bold">
+                                  {order.payment_method || 'Online'}
+                                </span>
+                              )}
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                                {order.payment_status || order.status || 'PAID'}
+                              </span>
+                            </div>
                           </div>
 
                           <div className="grid grid-cols-2 gap-2 text-[11px] text-neutral-600">
